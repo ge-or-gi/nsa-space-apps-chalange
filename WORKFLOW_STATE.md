@@ -17,6 +17,7 @@
 - New change request: revert the last implemented viewport-fit change; then change movement keys to J/K/L/I directions.
 - New change request: integrate `mars-assets.zip` into the project so assets work with the proposed asset-manifest JSON feature.
 - New feature request: add a mini-game inside the rover info modal with one launch-date question; only count rover as retrieved if answered correctly.
+- New change request: add a YouTube video for Sojourner intel (`https://www.youtube.com/watch?v=9HGRReKUzfU&t=26s`) as a second media item, with the same capability to be added for every rover as user provides links.
 
 ## Clarified Scope
 - Build a Mars-themed rover survival mini-game prototype in HTML + JavaScript.
@@ -96,6 +97,12 @@
   - Wrong answers: unlimited retries in the same modal.
   - Retrieval gating: rover is not counted as retrieved in HUD/objectives until correct answer.
   - On correct answer: auto-close modal and show success message.
+- Latest user clarifications for rover intel video media:
+  - Add Sojourner YouTube video as embedded media in rover intel modal.
+  - Video should appear as a second stacked media item (image first, video second).
+  - Add per-rover `videoUrl` in `data/rovers.json` for future rover links.
+  - Do not use timestamp start offset from provided URL (start from beginning).
+  - Same implementation pattern should support adding videos for all rovers as links are provided.
 
 ## Open Questions
 - None blocking.
@@ -145,6 +152,11 @@
 - Quiz must be one launch-year question per rover entry (multiple choice).
 - Unlimited retry attempts must be supported without leaving modal.
 - Success flow must auto-close modal and provide success feedback.
+- New media requirement: rover intel should support a second media item using user-provided rover video links (starting with Sojourner).
+- Video must be embedded directly in modal (iframe), not link-out only.
+- Modal media layout should be stacked with image first and video second.
+- Rover intel data model should include `videoUrl` field per rover for future additions.
+- Ignore provided YouTube time offsets; embedded playback should start from beginning.
 
 ## Plan
 - Build a single-page browser game using HTML5 Canvas + vanilla JavaScript for fastest prototype delivery.
@@ -243,6 +255,18 @@
   - On correct answer: mark rover retrieved, update HUD/objective counters, show success message, and auto-close modal.
   - Preserve modal pause behavior, close paths, and no-crash fallbacks if quiz data is missing.
   - Update styles in `style.css` for kid-friendly quiz controls/readability.
+- Rover intel video-media plan:
+  - Add `videoUrl` field consistently to all rover records in `data/rovers.json` (Sojourner set to provided URL; others nullable/empty until provided).
+  - Extend intel modal media section in `index.html` to include a second stacked video panel under the existing image.
+  - Add CSS in `style.css` for responsive embedded-video container sizing (16:9), spacing, and fallback/hidden states.
+  - Update `game.js` modal renderer to:
+    - parse YouTube links into safe embed URLs (`https://www.youtube.com/embed/VIDEO_ID`) using allowlisted `youtube.com` / `youtu.be` patterns,
+    - ignore `t`/timestamp query params per user preference,
+    - render iframe only when `videoUrl` is present,
+    - keep existing image and fallback behavior unchanged when video is missing/invalid,
+    - clear/remove iframe source on modal close to stop background playback and stale state.
+  - Preserve current modal pause/resume behavior and quiz/retrieval gating logic.
+  - Keep implementation data-driven so future rover video links only require JSON updates.
 
 ## Debate Notes
 - Planner note: chose Canvas + vanilla JS to minimize setup overhead and keep prototype iteration fast.
@@ -334,8 +358,37 @@
   - Ensure wrong answers do not alter retrieval/progression state and remain retryable in-place.
   - Reuse shared modal close/pause resume path after success auto-close.
   - Add null-safe behavior if launch date is missing.
+- Video-media plan review (current request): approve with small safety/validation adjustments; the three-file implementation scope is appropriate and materially simpler than introducing the YouTube API.
+- Problems in Current Plan:
+  - `videoUrl` should be added explicitly to every rover record (empty string or `null`), not only Sojourner, so the schema is uniform and future data additions are predictable.
+  - “Valid YouTube URL” needs an explicit allowlist/parser for `youtube.com/watch`, `youtu.be`, and optionally `youtube.com/embed`; reject arbitrary protocols/domains before assigning `iframe.src` to avoid an iframe injection/open-redirect style data risk.
+  - The plan does not explicitly reset/remove the iframe when the modal closes. Clearing it on close prevents audio/video continuing after the modal is dismissed and avoids stale playback when another rover opens, while leaving game pause/resume and quiz gating untouched.
+  - Add targeted validation for URL parsing, timestamp stripping, missing URLs, iframe cleanup, and the unchanged quiz/modal close paths; syntax/JSON checks alone are insufficient.
+- Better Plan:
+  - Keep the existing `data/rovers.json` → `game.js` → DOM data-driven design and add `videoUrl` to all six entries; set only Sojourner to `https://www.youtube.com/watch?v=9HGRReKUzfU&t=26s`, while the renderer ignores `t` and produces `https://www.youtube.com/embed/9HGRReKUzfU` without `start`.
+  - Add dedicated media DOM references (`intelVideo`, `intelVideoFallback` or equivalent) and a single `renderIntelVideo()` helper. Build the iframe with `document.createElement`, `allow`, `loading="lazy"`, title, and `referrerpolicy`; never inject an iframe HTML string.
+  - Parse only supported YouTube host/path formats, extract the 11-character video ID, and return no iframe for malformed/untrusted URLs. On render failure/absence, hide the video panel cleanly. On `closeIntelModal()`, remove/reset the iframe before resuming/clearing modal state.
+  - Preserve the existing shared open/close path, pause flag, quiz generation/retrieval gating, and image rendering. Avoid autoplay and API-script dependencies; YouTube’s standard iframe embed is sufficient.
+  - Validate with `node --check game.js`, JSON parse/schema checks for all six `videoUrl` fields, and a focused browser/manual test: Sojourner is image then video at 0:00, each other rover has no empty media panel, invalid URL is inert, close stops playback, and wrong/correct quiz behavior remains unchanged.
+  - API behavior verified against YouTube’s official IFrame player parameters documentation: the canonical form is `https://www.youtube.com/embed/VIDEO_ID`; `start` controls an offset, so omitting it starts at the beginning; autoplay defaults to `0`; embeds require at least a 200×200 viewport (16:9 sizing should be large enough for the modal). `modestbranding` is deprecated/has no effect, and `rel=0` only limits related videos to the same channel rather than disabling them.
+- Exact plan adjustments before implementation:
+  - Plan: add uniform nullable/empty `videoUrl` values for all six records; implement allowlisted YouTube ID parsing, no timestamp parameter, iframe teardown on close, and focused media/modal regression validation.
+  - Files To Change: retain `data/rovers.json`, `index.html`, `style.css`, and `game.js`; add no new dependency or YouTube API script. Update the planned `game.js` work to include video DOM cleanup and safe parser tests/checks.
+  - Acceptance Criteria: require the canonical beginning-of-video embed, no iframe for missing/invalid URLs, playback stops when modal closes, and explicit verification that image-first stacking, pause/resume, close paths, and quiz gating remain unchanged.
 
 ## Files To Change
+- Rover intel video-media pass (planned):
+  - `data/rovers.json` (add `videoUrl` field, set Sojourner video link)
+  - `index.html` (add second stacked embedded-video media block in intel modal)
+  - `style.css` (video embed container/layout styles + fallback visibility rules)
+  - `game.js` (YouTube URL→embed mapping and conditional iframe rendering)
+  - `WORKFLOW_STATE.md` (planning/debate/handoff updates)
+- Rover intel video-media pass (implemented this pass):
+  - `data/rovers.json` (added `videoUrl` to all six rover records; set Sojourner to provided YouTube URL)
+  - `index.html` (added stacked video panel under rover image with dedicated embed/fallback containers)
+  - `style.css` (added responsive 16:9 video embed styles and fallback panel styles)
+  - `game.js` (added allowlisted YouTube URL parser, canonical embed URL builder, conditional iframe rendering, and iframe teardown on modal close)
+  - `WORKFLOW_STATE.md` (implementor status/notes/tests/next-agent handoff updates)
 - Rover quiz-gating pass (implemented this pass):
   - `index.html` (added rover modal quiz block: prompt, options container, feedback area)
   - `style.css` (added quiz section/button/feedback styles)
@@ -421,6 +474,14 @@
   - `opencode.json` (`agent.debater.model` set to `github-copilot/gpt-5.6-luna`)
 
 ## Current Status
+- Rover intel video-media implementation complete (this pass):
+  - Added `videoUrl` uniformly across all six rover entries in `data/rovers.json`.
+  - Sojourner now uses the user-provided URL; other rover `videoUrl` values are empty placeholders.
+  - Intel modal media stack is now image first, embedded video second (video panel hidden when missing/invalid).
+  - `game.js` now parses only allowlisted YouTube URL formats (`youtube.com/watch`, `youtube.com/embed`, `youtu.be`), extracts strict 11-char IDs, and generates canonical embeds (`https://www.youtube.com/embed/VIDEO_ID`) without timestamp/start params.
+  - Modal close now clears/removes the iframe to stop playback and avoid stale state.
+  - Existing pause/resume behavior and quiz-gating flow preserved.
+- Ready for reviewer validation of rover video-media pass.
 - Rover modal quiz-gating implementation complete:
   - Added one launch-year multiple-choice question inside rover intel modal.
   - Discovery nodes are now marked retrieved only after correct quiz answer (HUD/objectives gated accordingly).
@@ -614,11 +675,40 @@
 - Wrong answers allow unlimited retries in the same modal.
 - HUD/objective rover counts do not increase until the quiz answer is correct.
 - Correct answer shows success message and auto-closes modal.
+- Sojourner intel modal shows embedded YouTube video as a second stacked media item under the rover image.
+- Rover intel JSON schema includes `videoUrl` for each rover entry (nullable/empty allowed where not yet provided).
+- Modal renders video iframe only when valid `videoUrl` exists and otherwise remains stable with no UI/runtime errors.
+- YouTube links are converted to embed URLs and do not enforce provided timestamp offsets.
+- Existing modal behavior (pause/resume, close paths, quiz gating, rover details, attribution links) remains unchanged.
 
 ## Next Agent
-- `reviewer` — review rover modal quiz-gating implementation (retrieval only after correct answer, unlimited retry behavior, success auto-close path, null-safe launch year handling, and no control/gameplay regressions beyond approved gating).
+- Reviewer: validate rover intel video-media pass (safe parser allowlist, canonical embed URL behavior without timestamp offset, conditional iframe rendering, iframe teardown on close, and no regressions to pause/resume + quiz gating). @reviewer please review the result.
 
 ## Implementation Notes
+- Implemented approved rover intel video-media pass with minimal, scoped edits:
+  - `data/rovers.json`
+    - Added `videoUrl` key on all six rover objects.
+    - Set Sojourner `videoUrl` to `https://www.youtube.com/watch?v=9HGRReKUzfU&t=26s`.
+    - Left other rover `videoUrl` values as empty strings for future links.
+  - `index.html`
+    - Added a new `intel-modal__video` block under existing image media:
+      - `#intelVideoPanel`, `#intelVideoEmbed`, `#intelVideoFallback`.
+  - `style.css`
+    - Added video panel styles with responsive 16:9 ratio using pseudo-element padding.
+    - Added iframe sizing and visual treatment consistent with modal media cards.
+  - `game.js`
+    - Added video DOM refs to `intelUi`.
+    - Added `parseYouTubeVideoId()` with domain allowlist + path handling:
+      - `youtu.be/<id>`
+      - `youtube.com/watch?v=<id>`
+      - `youtube.com/embed/<id>` (including subdomains).
+    - Added strict 11-char ID validation and canonical URL builder `toCanonicalYouTubeEmbedUrl()`.
+    - Added `renderIntelVideo()` to create iframe via DOM API (`document.createElement`) only.
+    - Added `clearIntelVideo()` and called it on `closeIntelModal()` to stop background playback.
+    - Kept existing image rendering/fallback and quiz-gating logic unchanged.
+- Context/API verification note:
+  - Context7 MCP is not available in this environment, so direct Context7 lookup could not be executed in this pass.
+  - Implementation follows already-approved debate guidance for YouTube embed behavior and uses standard browser DOM URL APIs.
 - Implemented approved rover quiz-gating with minimal scope:
   - `index.html`: inserted `intel-modal__quiz` section with:
     - `#intelQuizPrompt`
@@ -864,6 +954,22 @@
 - Reviewer output still pending due to environment model routing issue.
 
 ## Test Results
+- Rover intel video-media verification (this pass):
+  - `node --check "game.js"` ✅
+  - `node -e "const fs=require('node:fs'); const data=JSON.parse(fs.readFileSync('data/rovers.json','utf8')); if(!Array.isArray(data)) throw new Error('rovers.json not array'); if(data.length!==6) throw new Error('expected 6 rover records'); const missing=data.filter((r)=>!Object.prototype.hasOwnProperty.call(r,'videoUrl')); if(missing.length) throw new Error('missing videoUrl'); const soj=data.find((r)=>r.name==='Sojourner'); if(!soj||soj.videoUrl!=='https://www.youtube.com/watch?v=9HGRReKUzfU&t=26s') throw new Error('bad Sojourner videoUrl'); console.log('ok');"` ✅
+  - `rg -n "videoUrl" data/rovers.json` ✅
+    - Confirmed all six rover records include `videoUrl`.
+  - `rg -n "intelVideoPanel|intelVideoEmbed|intelVideoFallback" index.html game.js` ✅
+    - Confirmed modal video DOM hooks and JS references are wired.
+  - `rg -n "parseYouTubeVideoId|toCanonicalYouTubeEmbedUrl|renderIntelVideo|clearIntelVideo|youtube\.com|youtu\.be|/embed/" game.js` ✅
+    - Confirmed allowlisted parser, canonical embed builder, render helper, and cleanup helper exist.
+  - Code-path verification (manual/static): ✅
+    - Sojourner: `videoUrl` is present and processed into canonical embed URL without timestamp/start.
+    - Non-video rovers: empty `videoUrl` returns no embed URL, so video panel stays hidden.
+    - Invalid/malformed URL: parser returns empty ID/URL, so no iframe is rendered.
+    - Modal close: `closeIntelModal()` calls `clearIntelVideo()` to remove iframe and stop playback.
+    - Quiz gating: existing `renderIntelQuiz()` / `markDiscoveryRetrieved()` flow remains intact.
+  - Limitation: browser runtime playtest not executable in this CLI-only environment.
 - Rover quiz-gating verification (this pass):
   - `node --check "game.js"` ✅
   - `node -e "const fs=require('node:fs'); JSON.parse(fs.readFileSync('data/rovers.json','utf8')); console.log('rovers.json ok');"` ✅
@@ -932,7 +1038,7 @@
   - `rg -n "100dvh|overscroll-behavior|html,|overflow: hidden;|height: 100%|height: 100vh;" style.css` ✅
     - No viewport-fit containment signatures remain from the reverted patch; only pre-existing style usage remains (`min-height: 100vh`, `.canvas-wrap { overflow: hidden; }`).
 
-Handoff note: @reviewer please review the rover modal quiz-gating pass for (1) modal multiple-choice launch-year UI wiring, (2) retrieval/HUD progression only occurring after correct answer, (3) wrong-answer unlimited retry behavior in the same modal, (4) success feedback + auto-close using existing modal close path, and (5) null-safe handling when launch year is unavailable, while ensuring no regressions to approved controls (`J/K/L/I`, mouse aim/fire, `E`, `R`) or existing modal content/attribution/pause-resume semantics.
+Handoff note: @reviewer please review the rover intel video-media implementation for (1) stacked image→video media layout in modal, (2) safe allowlisted YouTube URL parsing and 11-char ID validation, (3) canonical embed URL generation with no timestamp offset/start param, (4) iframe teardown on modal close to stop playback, and (5) no regressions to existing modal pause/resume + quiz-gating behavior.
 
 ## Security Findings
 -

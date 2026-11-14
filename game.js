@@ -80,6 +80,9 @@ const intelUi = {
   title: document.getElementById("intelTitle"),
   image: document.getElementById("intelImage"),
   imageFallback: document.getElementById("intelImageFallback"),
+  videoPanel: document.getElementById("intelVideoPanel"),
+  videoEmbed: document.getElementById("intelVideoEmbed"),
+  videoFallback: document.getElementById("intelVideoFallback"),
   summary: document.getElementById("intelSummary"),
   launchDate: document.getElementById("intelLaunchDate"),
   landingDate: document.getElementById("intelLandingDate"),
@@ -916,6 +919,7 @@ function openIntelModal(name, discoveryNode = null) {
       title: "Not available",
       url: "",
     },
+    videoUrl: "",
   };
 
   intelUi.title.textContent = `${intel.name} Intel`;
@@ -936,6 +940,7 @@ function openIntelModal(name, discoveryNode = null) {
   }
 
   renderIntelImage(intel);
+  renderIntelVideo(intel);
   renderIntelQuiz(intel, discoveryNode);
 
   renderAttribution(intelUi.source, "Source", intel.source);
@@ -943,6 +948,75 @@ function openIntelModal(name, discoveryNode = null) {
 
   setIntelModalOpen(true);
   interactPressed = false;
+}
+
+function clearIntelVideo() {
+  if (!intelUi.videoEmbed || !intelUi.videoPanel || !intelUi.videoFallback) return;
+  intelUi.videoEmbed.replaceChildren();
+  intelUi.videoFallback.hidden = true;
+  intelUi.videoFallback.textContent = "Video unavailable";
+  intelUi.videoPanel.hidden = true;
+}
+
+function isValidYouTubeVideoId(value) {
+  return typeof value === "string" && /^[A-Za-z0-9_-]{11}$/.test(value);
+}
+
+function parseYouTubeVideoId(videoUrl) {
+  if (typeof videoUrl !== "string" || !videoUrl.trim()) return "";
+
+  let parsed;
+  try {
+    parsed = new URL(videoUrl.trim());
+  } catch {
+    return "";
+  }
+
+  const protocol = parsed.protocol.toLowerCase();
+  if (protocol !== "https:" && protocol !== "http:") return "";
+
+  const hostname = parsed.hostname.toLowerCase();
+  let videoId = "";
+
+  if (hostname === "youtu.be") {
+    const pathSegments = parsed.pathname.split("/").filter(Boolean);
+    videoId = pathSegments[0] || "";
+  } else if (hostname === "youtube.com" || hostname.endsWith(".youtube.com")) {
+    const path = parsed.pathname;
+    if (path === "/watch") {
+      videoId = parsed.searchParams.get("v") || "";
+    } else if (path.startsWith("/embed/")) {
+      const pathSegments = path.split("/").filter(Boolean);
+      videoId = pathSegments[1] || "";
+    }
+  }
+
+  return isValidYouTubeVideoId(videoId) ? videoId : "";
+}
+
+function toCanonicalYouTubeEmbedUrl(videoUrl) {
+  const videoId = parseYouTubeVideoId(videoUrl);
+  return videoId ? `https://www.youtube.com/embed/${videoId}` : "";
+}
+
+function renderIntelVideo(intel) {
+  clearIntelVideo();
+
+  if (!intelUi.videoEmbed || !intelUi.videoPanel || !intelUi.videoFallback) return;
+
+  const embedUrl = toCanonicalYouTubeEmbedUrl(intel?.videoUrl);
+  if (!embedUrl) return;
+
+  const iframe = document.createElement("iframe");
+  iframe.src = embedUrl;
+  iframe.title = `${asText(intel?.name)} mission video`;
+  iframe.loading = "lazy";
+  iframe.referrerPolicy = "strict-origin-when-cross-origin";
+  iframe.allow = "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share";
+  iframe.allowFullscreen = true;
+
+  intelUi.videoEmbed.append(iframe);
+  intelUi.videoPanel.hidden = false;
 }
 
 function parseLaunchYear(launchDate) {
@@ -1118,6 +1192,7 @@ function closeIntelModal() {
     window.clearTimeout(autoCloseIntelTimer);
     autoCloseIntelTimer = null;
   }
+  clearIntelVideo();
   activeDiscoveryNode = null;
   setIntelModalOpen(false);
 }

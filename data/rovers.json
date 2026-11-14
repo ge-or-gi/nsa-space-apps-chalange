@@ -2,6 +2,7 @@
   {
     "name": "Sojourner",
     "imageUrl": "assets/rovers/sojourner.jpg",
+    "videoUrl": "https://www.youtube.com/watch?v=9HGRReKUzfU&t=26s",
     "missionSummary": "Sojourner, delivered by Mars Pathfinder, became the first rover to operate on another planet and proved mobile surface science on Mars was feasible.",
     "launchDate": "December 4, 1996",
     "landingDate": "July 4, 1997",
@@ -26,6 +27,7 @@
   {
     "name": "Spirit",
     "imageUrl": "assets/rovers/spirit.jpg",
+    "videoUrl": "https://youtu.be/b_lPbSdkLKM?si=0iGig4FKnuFZE1Uo",
     "missionSummary": "Spirit, one of NASA's twin Mars Exploration Rovers, studied Gusev Crater for evidence of past water activity and environmental change.",
     "launchDate": "June 10, 2003",
     "landingDate": "January 3, 2004 (PST)",
@@ -50,6 +52,7 @@
   {
     "name": "Opportunity",
     "imageUrl": "assets/rovers/opportunity.jpg",
+    "videoUrl": "https://youtu.be/1Ll-VHYxWXU?si=dDGyTSwkCC7Qsjtk",
     "missionSummary": "Opportunity explored Meridiani Planum and delivered major discoveries about ancient water and long-term habitability on Mars.",
     "launchDate": "July 7, 2003",
     "landingDate": "January 24, 2004 (PST)",
@@ -74,6 +77,7 @@
   {
     "name": "Curiosity",
     "imageUrl": "assets/rovers/curiosity.jpg",
+    "videoUrl": "https://youtu.be/N9hXqzkH7YA?si=eg_NoWxYVNSF2nue",
     "missionSummary": "Curiosity (Mars Science Laboratory) studies Gale Crater to determine whether ancient Mars could have supported microbial life.",
     "launchDate": "November 26, 2011",
     "landingDate": "August 5, 2012 (PDT)",
@@ -98,6 +102,7 @@
   {
     "name": "Perseverance",
     "imageUrl": "assets/rovers/perseverance.jpg",
+    "videoUrl": "https://youtu.be/rzmd7RouGrM?si=XEH0zzxh1ON0XzMp",
     "missionSummary": "Perseverance (Mars 2020) explores Jezero Crater, seeks signs of ancient life, and caches samples for possible return to Earth.",
     "launchDate": "July 30, 2020",
     "landingDate": "February 18, 2021",
@@ -122,6 +127,7 @@
   {
     "name": "Ingenuity",
     "imageUrl": "assets/rovers/ingenuity.jpg",
+    "videoUrl": "https://youtu.be/0RQWv1ybsjM?si=Zc08I7dY85jyvcnl",
     "missionSummary": "Ingenuity, carried to Mars with Perseverance, achieved the first powered, controlled flight on another world and expanded aerial scouting concepts.",
     "launchDate": "July 30, 2020 (with Perseverance)",
     "landingDate": "February 18, 2021",
