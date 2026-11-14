@@ -1,0 +1,10 @@
+{
+  "name": "mars-rover-survival",
+  "private": true,
+  "scripts": {
+    "serve": "http-server . -a 127.0.0.1 -p 8080 -c-1"
+  },
+  "devDependencies": {
+    "http-server": "^14.1.1"
+  }
+}

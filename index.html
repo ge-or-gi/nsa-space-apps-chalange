@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Mars: Last Signal</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&family=Inter:wght@400;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <main class="game-shell">
+      <header class="hud">
+        <p class="hud-kicker">NASA Junior Mission Control</p>
+        <h1>Mars: Last Signal</h1>
+        <p class="hud-subtitle">Explore, survive, and bring home every rover signal.</p>
+        <div class="hud-row">
+          <span id="health" class="hud-chip">Health: 100</span>
+          <span id="wave" class="hud-chip">Wave: 1</span>
+          <span id="discoveries" class="hud-chip">Rovers Found: 0/0</span>
+          <span id="parts" class="hud-chip">Rocket Parts: 0/0</span>
+        </div>
+        <p id="objective">Objective: Survive and gather intel.</p>
+      </header>
+
+      <section class="canvas-wrap">
+        <canvas id="gameCanvas" width="960" height="600" aria-label="Mars survival game"></canvas>
+      </section>
+
+      <footer class="controls">
+        <strong>Controls:</strong>
+        Move (J/K/L/I) • Aim (Mouse) • Fire (Left Click) • Interact (E) • Restart (R)
+      </footer>
+    </main>
+
+    <div id="intelModal" class="intel-modal" role="dialog" aria-modal="true" aria-labelledby="intelTitle" hidden>
+      <div class="intel-modal__backdrop" data-close-intel="true"></div>
+      <section class="intel-modal__panel">
+        <button id="intelClose" class="intel-modal__close" type="button" aria-label="Close rover intel">×</button>
+        <h2 id="intelTitle">Rover Intel</h2>
+        <div class="intel-modal__body">
+          <section class="intel-modal__media">
+            <img id="intelImage" class="intel-modal__image" alt="" />
+            <div id="intelImageFallback" class="intel-modal__image-fallback" hidden>Image not available</div>
+          </section>
+
+          <section class="intel-modal__content">
+            <p id="intelSummary"></p>
+
+            <dl class="intel-modal__details">
+              <div><dt>Launch Date</dt><dd id="intelLaunchDate"></dd></div>
+              <div><dt>Landing Date</dt><dd id="intelLandingDate"></dd></div>
+              <div><dt>Status</dt><dd id="intelStatus"></dd></div>
+              <div><dt>Mission Duration</dt><dd id="intelDuration"></dd></div>
+              <div><dt>Operator / Agency</dt><dd id="intelOperator"></dd></div>
+            </dl>
+
+            <h3 class="intel-modal__subhead">Mission Objective</h3>
+            <p id="intelObjective"></p>
+
+            <h3 class="intel-modal__subhead">Key Achievements</h3>
+            <ul id="intelAchievements"></ul>
+
+            <p id="intelSource" class="intel-modal__source"></p>
+            <p id="intelImageSource" class="intel-modal__source"></p>
+          </section>
+        </div>
+      </section>
+    </div>
+
+    <script src="game.js"></script>
+  </body>
+</html>

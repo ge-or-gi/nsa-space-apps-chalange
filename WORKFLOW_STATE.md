@@ -1,0 +1,765 @@
+# Workflow State
+
+## Request
+- Build a game using HTML and JavaScript.
+- New change request: when a player finds a rover, show information about that rover sourced from NASA.
+- Bug report: rover intel modal is always open; when clicking the close button it should close.
+- New change request: rover information is not complete; add image for every rover and more detailed information in the modal window.
+- New bug report: rover information is not showing in the modal.
+- New request: game is run by opening file directly; add a simple HTTP server setup and command to run the game correctly.
+- New change request: images are not showing; switch rover images to local files referenced from JSON.
+- New change request: use specific provided image URLs for Opportunity, Ingenuity, Curiosity, and Spirit.
+- New change request: make the game look more modern.
+- Config request: change `debater` model to `gpt-5.6-luna`.
+- New change request: make the game more modern and beautiful for kids.
+- New change request: player sprite should be an astronaut with a pistol.
+- New bug report: screen/page moves when using arrow keys for game navigation; fix so gameplay keys do not scroll the page.
+- New change request: revert the last implemented viewport-fit change; then change movement keys to J/K/L/I directions.
+
+## Clarified Scope
+- Build a Mars-themed rover survival mini-game prototype in HTML + JavaScript.
+- Player uses keyboard + mouse controls.
+- Prototype should include animation and a survival gameplay loop.
+- Library/framework use is allowed, but no specific preference was provided.
+- Single-player browser game.
+- Core goal: survive enemy waves while exploring Mars to find NASA rovers/robots and collect rocket parts.
+- Win condition: collect required rover/robot discoveries + rocket parts, then build rocket to return home.
+- Visual style: simple placeholder graphics now, with structure that can be improved later.
+- Rover information feature clarified:
+  - Data source: local JSON file with NASA-sourced rover facts.
+  - Coverage: all rover objectives + Ingenuity.
+  - UI: modal popup shown on rover discovery.
+  - Behavior: gameplay pauses while modal is open.
+  - Confirmed roster: Sojourner, Spirit, Opportunity, Curiosity, Perseverance, and Ingenuity.
+- Bug-fix scope:
+  - Modal must be hidden by default on initial page load.
+  - Modal close button must reliably hide modal.
+  - Existing backdrop/keyboard close behavior should remain functional.
+- Rover intel content expansion requested:
+  - Add an image for each rover/Ingenuity entry shown in modal.
+  - Add more detailed mission information in modal content.
+- Content-expansion details confirmed by user:
+  - Image source: load rover images from NASA URLs.
+  - Detail fields required: launch date, landing date, mission status, mission objective, key achievements, mission duration, operator/agency.
+  - Attribution: include clickable source links for text and image info.
+  - UI: use a larger modal layout that fits image + detailed data comfortably.
+- Runtime clarification:
+  - User currently opens `index.html` directly (`file://`) which prevents JSON fetch from working consistently.
+  - User wants a simple local HTTP server setup and explicit command(s) to run the game via `http://`.
+  - Preferred runtime method confirmed: Node/npm script.
+- New direction requested:
+  - Replace remote NASA image URLs with local image assets for rover modal rendering.
+  - User confirmed: assistant should download rover images and store as JPEG files.
+  - Keep existing detailed modal fields and clickable NASA attribution links.
+- User supplied explicit preferred image URLs for 4 entries:
+  - Opportunity: `https://cdn.mos.cms.futurecdn.net/nmZohGRNKTUHu5834T3KYF-750-80.jpg`
+  - Ingenuity: `https://cdn.mos.cms.futurecdn.net/ipKcWFaLMsJ8FeXAVZ6BrR-1200-80.jpg`
+  - Curiosity: `https://upload.wikimedia.org/wikipedia/commons/f/f3/Curiosity_Self-Portrait_at_%27Big_Sky%27_Drilling_Site.jpg`
+  - Spirit: `https://planetary.s3.amazonaws.com/image/mer-concept-browse_2.jpg`
+- User confirmation:
+  - Keep existing Sojourner and Perseverance images as-is.
+  - Download provided 4 URLs and store as local JPEG assets.
+- New UI request captured: visual modernization pass for game presentation.
+- Modernization preferences confirmed:
+  - Scope: full UI + canvas effects.
+  - Style direction: NASA mission dashboard.
+  - Assets: web fonts are allowed.
+  - Target platform: desktop-only for now.
+- Latest user clarifications for new pass ("modern and beautiful for kids"):
+  - Target age range: 8–11.
+  - Scope limited to visuals only (no gameplay/mechanics changes).
+  - Preferred style: playful NASA dashboard.
+  - No audio/music changes in this pass.
+  - Controls must stay exactly the same.
+- Latest user clarifications for astronaut sprite request:
+  - Player sprite should use an image asset (not canvas-drawn vector-only).
+  - Asset should be royalty-free.
+  - Apply the visual sprite/style change across all relevant entities (player + enemies/projectiles), not player-only.
+- Latest user clarification for arrow-key screen-move bug:
+  - Preferred fix approach: make game layout fully fit the viewport (100% viewport) so page does not move during play.
+- Latest user clarifications for revert + key-remap request:
+  - Revert only the most recent viewport-fit CSS containment patch.
+  - Movement keys should be J/K/L/I only.
+  - Keep other controls unchanged: mouse aim/fire, `E` interact, `R` restart.
+
+## Open Questions
+- None blocking.
+
+## Constraints
+- Must use HTML + JavaScript.
+- Prototype-level mini-game (not full polished production game).
+- Theme: Mars + Mars rovers.
+- Input: mouse + keyboard.
+- Must include animation and survival gameplay.
+- Single-player only.
+- Wave-based survival loop.
+- Simple graphics with upgrade path.
+- Rover discovery should display factual rover information from NASA source.
+- Rover info must come from local JSON dataset (NASA-sourced content), not runtime API calls.
+- Rover info shown in modal popup and game loop must pause until modal is dismissed.
+- Rover intel should be richer than current summary/facts and include one image per rover entry.
+- Rover images should load from NASA URLs (remote image links).
+- Modal must include full detailed fields + clickable NASA attribution links for content and image.
+- Modal layout should be enlarged to fit detailed content.
+- Provide a simple and reproducible local HTTP run workflow for non-technical users.
+- Use Node/npm script approach (not Python command as primary path).
+- Rover modal images should load from local project files via JSON paths (no remote runtime image dependency).
+- Download and store rover images in JPEG format.
+- New request should prioritize UI/UX visual modernization without breaking current gameplay behavior.
+- Include full UI + canvas visual improvements.
+- Use NASA mission-dashboard visual language.
+- Web fonts are allowed.
+- Desktop-first polish only (mobile responsiveness not required in this pass).
+- Kid-friendly visual direction should target ages 8–11.
+- This pass is visual-only; do not change gameplay logic/difficulty/progression.
+- Controls must remain unchanged.
+- No audio/music additions in this pass.
+- New request adds player-visual requirement: player should appear as an astronaut carrying a pistol (visual change only unless user specifies otherwise).
+- Sprite asset(s) should be royalty-free.
+- Apply visual restyle to all relevant entities (player, enemies, projectiles) while keeping gameplay/control logic unchanged.
+- Keyboard controls should drive gameplay without moving the browser page/viewport.
+- Implement fix primarily through viewport-fitted layout/CSS behavior (per user preference).
+- Revert only viewport-fit CSS patch; retain sprite pass and modernization changes.
+- Movement input must be J/K/L/I only (arrow keys disabled for movement).
+- Keep mouse aim/fire + `E` interact + `R` restart unchanged.
+
+## Plan
+- Build a single-page browser game using HTML5 Canvas + vanilla JavaScript for fastest prototype delivery.
+- Implement player rover controls (WASD/arrow keys for movement, mouse for aiming; `E` for interaction; click for action).
+- Implement wave system: enemies spawn per wave with increasing difficulty; player has health and can lose.
+- Implement exploration/collection loop: spawn rover/robot discovery nodes and rocket-part pickups across the map.
+- Implement objective tracker + HUD (health, wave, collected rover/robot count, collected rocket parts).
+- Implement win flow: once all objectives are collected, enable rocket assembly zone/action to win.
+- Keep art as simple geometric sprites/colors, with centralized constants to simplify later visual upgrades.
+- Add explicit game states (`playing`, `game_over`, `victory`) with clear on-screen messaging.
+- Add rover intel data layer:
+  - Create `data/rovers.json` with NASA-sourced facts per rover.
+  - Load rover dataset at startup and map discovery nodes to rover records.
+- Add modal system in DOM (`index.html` + `style.css`) for rover info display with close action.
+- Add pause/resume integration: when rover modal opens, freeze wave timers/spawns/enemy updates/projectiles until close.
+- Track seen intel entries to avoid duplicate popups unless replay behavior is desired.
+- Bug-fix plan:
+  - Verify modal default visibility in `index.html`/`style.css` (ensure hidden state class/attribute at startup).
+  - Verify modal open/close handlers in `game.js` bind correctly and toggle the same visibility state.
+  - Ensure close button click path clears pause flag (`intelOpen`) and resumes game loop.
+  - Keep backward compatibility for backdrop click and keyboard close.
+- Content-expansion plan:
+  - Extend `data/rovers.json` schema for each entry with:
+    - `imageUrl` (NASA-hosted),
+    - `launchDate`, `landingDate`, `status`, `missionObjective`, `keyAchievements[]`, `missionDuration`, `operator`,
+    - `source` and `imageSource` (clickable attribution metadata).
+  - Expand modal markup in `index.html` to include image region + structured detail fields + attribution links.
+  - Update `style.css` for larger modal dimensions and scroll-safe content layout.
+  - Update `game.js` modal rendering to map new fields and handle missing/failed image URLs with graceful fallback text/image placeholder.
+  - Preserve existing pause/resume and close behavior while modal is open.
+- Runtime/server plan:
+  - Add minimal local web server option to project (prefer zero-friction command).
+  - Add npm-based run command in `package.json` (e.g., `npm run serve`) for local static hosting.
+  - Document exact run steps in `README.md` (install deps if needed, start server, open URL, stop server).
+  - Add user-facing note explaining why `file://` breaks JSON loading.
+- Local-image migration plan (pending clarification):
+  - Add local rover image assets (JPEG) under `assets/rovers/` for Sojourner, Spirit, Opportunity, Curiosity, Perseverance, and Ingenuity.
+  - Update `data/rovers.json` image paths from remote URLs to local relative URLs.
+  - Preserve and/or improve NASA source + image attribution links in JSON and modal.
+  - Ensure `game.js` image rendering uses local paths while keeping current fallback behavior for missing files.
+  - Update README note (if needed) to mention local assets are bundled and still require HTTP server for JSON fetch.
+- Provided-image override plan:
+  - Download user-specified images for Spirit, Opportunity, Curiosity, and Ingenuity.
+  - Replace corresponding local files in `assets/rovers/` with those downloads (JPEG).
+  - Keep existing Sojourner/Perseverance local files unchanged.
+  - Update `data/rovers.json` `imageSource` attribution links for the 4 overridden images to match user-provided URLs.
+  - Keep `imageUrl` local asset paths unchanged so runtime remains local-file based.
+- Modernization plan:
+  - Refresh `index.html` structure for a cleaner mission-control layout (header/status panel/game area/footer hints).
+  - Overhaul `style.css` with NASA-dashboard theme: grid panels, better spacing/typography, depth/shadows, high-contrast HUD tokens, refined modal styling.
+  - Add modern canvas rendering polish in `game.js`: background gradients/overlays, subtle atmospheric particles, improved entity styling, and clearer visual feedback cues.
+  - Preserve all gameplay logic/controls/objectives while separating visual constants for maintainability.
+  - Add desktop-oriented sizing rules and ensure no regressions in modal visibility/pause behavior.
+- Modernization plan (kid-friendly 8–11, playful NASA dashboard, visual-only):
+  - Update `index.html` presentation wrappers/labels only as needed for a more playful mission-control framing without changing controls or gameplay wiring.
+  - Re-theme `style.css` to a kid-friendly NASA dashboard look: brighter but readable palette, rounded cards/panels, friendlier typography scale, clearer iconography accents, and softer shadows.
+  - Improve HUD/readability for kids: larger labels/values, stronger visual grouping, and clearer hierarchy while preserving existing data fields and behavior.
+  - Refresh modal visuals for kids (spacing, rounded corners, badge-like field chips) while preserving all rover data fields, attribution links, and pause/close behavior.
+  - Add canvas-only polish in `game.js` (background gradients, stars/dust ambience, subtle glow trails/feedback) without changing movement/combat/wave/objective mechanics.
+  - Keep control hints intact and unchanged; ensure no key/mouse interaction regressions.
+  - Verify desktop presentation coherence and accessibility contrast for ages 8–11.
+- Astronaut sprite expansion plan (visual-only, apply to all):
+  - Add royalty-free sprite asset set under `assets/sprites/` for astronaut-with-pistol theme (player plus compatible enemy/projectile visuals).
+  - Update `game.js` rendering layer to load and draw sprite images for player/enemies/projectiles while preserving existing hitboxes, movement, combat timing, and control behavior.
+  - Keep robust fallback rendering (existing geometric draw path) if an image fails to load.
+  - Ensure projectile direction/rotation visuals still align with current aiming/combat logic without changing mechanics.
+  - Maintain current HUD/modal/data behavior unchanged.
+  - Verify no regressions: controls unchanged, wave/objective behavior unchanged, and syntax/runtime checks pass.
+- Viewport-fit scrolling fix plan:
+  - Update page/game container layout in `index.html`/`style.css` so the app occupies exactly one viewport with no document overflow.
+  - Use robust viewport sizing rules (`100vh` plus modern dynamic viewport fallback where appropriate) and overflow guards on root/body/app wrappers.
+  - Keep gameplay canvas and HUD responsive within the viewport without introducing page scrollbars.
+  - Preserve existing controls and gameplay behavior while ensuring arrow-key navigation no longer moves the page.
+  - Verify with quick checks that layout remains desktop-friendly and no modal/HUD regressions are introduced.
+- Revert + key-remap plan:
+  - Revert the recent viewport-fit CSS containment edits in `style.css` only, restoring prior layout behavior from before that patch.
+  - Update movement key mapping in `game.js` from WASD/arrows to J/K/L/I only:
+    - `I` = up, `K` = down, `J` = left, `L` = right.
+  - Ensure arrow keys no longer trigger movement logic in game input handling.
+  - Update control hint text in `index.html` (and related UI text) to show J/K/L/I while preserving mouse + `E` + `R` hints.
+  - Keep all gameplay logic, modal behavior, sprite rendering, and objective/wave systems unchanged.
+  - Validate with syntax check and targeted keybinding code-path checks.
+
+## Debate Notes
+- Planner note: chose Canvas + vanilla JS to minimize setup overhead and keep prototype iteration fast.
+- Attempted `debater` handoff twice, but blocked by environment error: `Model not found: github-copilot/gpt-5.4`.
+- Planner fallback critique added:
+  - Add explicit interaction key `E` for collecting discoveries/parts.
+  - Keep finite objective counts and bounded wave scaling for prototype stability.
+  - Ensure clear state transitions and end screens (Game Over / Rocket Built).
+- Attempted updated-feature `debater` handoff; blocked by same environment error: `Model not found: github-copilot/gpt-5.4`.
+- Fallback planner critique for rover-intel feature:
+  - Keep rover intel content local in `data/rovers.json` with source attribution field per entry (NASA URL/title).
+  - Pause must freeze simulation updates, spawn timers, and input actions that affect gameplay while modal is open.
+  - Add graceful handling for missing rover JSON records (show fallback message instead of crash).
+  - Lock roster explicitly to: Sojourner, Spirit, Opportunity, Curiosity, Perseverance, Ingenuity.
+- Attempted bug-fix `debater` handoff; blocked by same environment error: `Model not found: github-copilot/gpt-5.4`.
+- Fallback planner critique for modal regression fix:
+  - Use a single source of truth for visibility (`is-open` CSS class OR `hidden` attribute) to prevent desync.
+  - Ensure startup state explicitly hidden in markup/class initialization.
+  - Close handler must update both UI visibility and pause flag (`intelOpen = false`).
+  - Verify close paths parity: button click, backdrop click, and keyboard close all call same `closeIntelModal()` function.
+- Attempted content-expansion `debater` handoff; blocked by same environment error: `Model not found: github-copilot/gpt-5.4`.
+- Fallback planner critique for rich rover modal:
+  - Add robust image fallback (`onerror`) with placeholder panel text when remote NASA image fails.
+  - Keep detail rendering schema-driven and null-safe (show `Unknown` or `Not available` per missing field).
+  - Keep attribution links visible and external-safe (`target="_blank"` + `rel="noopener noreferrer"`).
+  - Make large modal content scrollable with fixed header/close control for usability.
+- Attempted runtime-setup `debater` handoff; blocked by same environment error: `Model not found: github-copilot/gpt-5.4`.
+- Fallback planner critique for npm server setup:
+  - Use `http-server` package with a single script `serve` for minimal friction.
+  - Prefer localhost bind and explicit port (e.g., `http-server . -p 8080 -c-1`) to avoid stale-cache issues while iterating.
+  - Document concise 3-step run flow: `npm install`, `npm run serve`, open `http://localhost:8080`.
+  - Add clear note that opening via `file://` breaks JSON fetch and should be avoided.
+- Attempted local-image-migration `debater` handoff; blocked by same environment error: `Model not found: github-copilot/gpt-5.4`.
+- Fallback planner critique for local images:
+  - Store images under `assets/rovers/` with stable lowercase filenames matching rover keys.
+  - Keep `imageSource` attribution URLs in JSON even when files are local copies.
+  - Retain existing image fallback logic for missing/corrupt files.
+  - Keep JPEG dimensions reasonable for performance; rely on CSS sizing in modal.
+- Attempted image-override `debater` handoff; blocked by same environment error: `Model not found: github-copilot/gpt-5.4`.
+- Fallback planner critique for provided image overrides:
+  - Keep local filenames stable (`assets/rovers/<name>.jpg`) and only replace file contents.
+  - Verify downloaded files are valid image MIME/data (not HTML or blocked content).
+  - Update `imageSource` links for overridden entries to exact provided URLs for accurate crediting.
+  - Preserve current local-loading runtime path to avoid network/runtime image failures.
+- Attempted modernization `debater` handoff; blocked by same environment error: `Model not found: github-copilot/gpt-5.4`.
+- Fallback planner critique for modernization pass:
+  - Prioritize CSS/UI system improvements first (layout, typography, spacing, color tokens) for highest impact with low gameplay risk.
+  - Keep canvas visual polish additive and optional (background/particles/FX layers) without modifying core simulation state.
+  - Add centralized theme constants to avoid scattered styling edits across JS/CSS.
+  - Preserve accessibility/readability (contrast, legible HUD text) while applying mission-dashboard styling.
+- Attempted kid-friendly modernization `debater` handoff; blocked by environment model routing error: `Model not found: github-copilot/gpt-5.4`.
+- Fallback planner critique for kid-friendly pass:
+  - Keep all interaction bindings intact (`WASD/arrows`, mouse aim/fire, `E`, `R`) and avoid touching input handlers.
+  - Push most kid-friendly uplift through CSS tokens (palette, radii, spacing, type scale) for low regression risk.
+  - Apply playful mission-dashboard styling to modal/HUD while preserving all existing data fields and attribution links.
+  - Restrict `game.js` changes to rendering-only effects and constants (no physics/combat/wave/objective variable changes).
+  - Validate contrast and text size for ages 8–11 to keep readability high.
+- Attempted astronaut-sprite-all-entities `debater` handoff; blocked by environment model routing error: `Model not found: github-copilot/gpt-5.4`.
+- Fallback planner critique for sprite migration:
+  - Introduce sprite loading as a separate render asset layer and avoid touching update/simulation logic.
+  - Keep collision/hitbox math bound to existing geometric sizes to avoid gameplay drift from image dimensions.
+  - Add explicit image-load fallback to current geometric renderer for reliability.
+  - Normalize sprite anchor/rotation handling so projectile direction remains visually aligned with current aim vector.
+  - Record royalty-free source and license/attribution in README or asset metadata.
+- Attempted viewport-fit bug-fix `debater` handoff; blocked by environment model routing error: `Model not found: github-copilot/gpt-5.4`.
+- Fallback planner critique for viewport-fit fix:
+  - Use `html, body` full-height rules plus `overflow: hidden` to prevent document scrolling during gameplay.
+  - Prefer app wrapper sizing with `100vh` and dynamic viewport fallback (`100dvh`) to avoid browser UI height quirks.
+  - Ensure modal content remains internally scrollable while page-level scrolling is disabled.
+  - Keep canvas/HUD scaling within viewport bounds to avoid accidental overflow.
+- Attempted revert+J/K/L/I-remap `debater` handoff; blocked by environment model routing error: `Model not found: github-copilot/gpt-5.4`.
+- Fallback planner critique for revert+remap:
+  - Revert only the exact viewport-fit CSS additions from last pass to avoid undoing unrelated style improvements.
+  - Centralize movement key mapping constants in `game.js` to reduce future keybind regressions.
+  - Remove arrow-key movement checks from input evaluation while preserving non-movement key handlers.
+  - Update visible controls hint text so UI matches actual keybindings.
+  - Keep sprite rendering and modal logic untouched; validate with syntax check + keybinding code-path scan.
+
+## Files To Change
+- `assets/rovers/sojourner.jpg` (new local JPEG)
+- `assets/rovers/spirit.jpg` (new local JPEG)
+- `assets/rovers/opportunity.jpg` (new local JPEG)
+- `assets/rovers/curiosity.jpg` (new local JPEG)
+- `assets/rovers/perseverance.jpg` (new local JPEG)
+- `assets/rovers/ingenuity.jpg` (new local JPEG)
+- `data/rovers.json` (switched `imageUrl` entries to local asset paths)
+- `README.md` (added note that rover images are bundled locally)
+- `WORKFLOW_STATE.md` (implementor handoff updates)
+- Image override request (this pass):
+  - `assets/rovers/opportunity.jpg` (overwritten from user-provided URL)
+  - `assets/rovers/ingenuity.jpg` (overwritten from user-provided URL)
+  - `assets/rovers/curiosity.jpg` (overwritten from user-provided URL)
+  - `assets/rovers/spirit.jpg` (overwritten from user-provided URL)
+  - `data/rovers.json` (`imageSource.url` updated for Spirit/Opportunity/Curiosity/Ingenuity)
+  - `WORKFLOW_STATE.md` (implementor status/results handoff)
+- Modernization pass:
+  - `index.html` (mission dashboard UI structure refinements)
+  - `style.css` (modern NASA-dashboard visual system)
+  - `game.js` (canvas visual polish only; no gameplay logic changes)
+  - `README.md` (optional note about visual refresh scope)
+- Kid-friendly modernization pass (visual-only):
+  - `index.html` (playful mission-control framing text/layout refinements; controls unchanged)
+  - `style.css` (kid-friendly playful NASA dashboard theme, readability upgrades, modal polish)
+  - `game.js` (visual rendering polish only; zero gameplay/control logic changes)
+  - `WORKFLOW_STATE.md` (planning/debate/handoff updates)
+- Implementor completion (this pass):
+  - `index.html` (presentation-only HUD framing, webfont includes, semantic copy refresh)
+  - `style.css` (tokenized playful NASA-dashboard theme, HUD/modal readability and grouping uplift)
+  - `game.js` (additive rendering-only polish for terrain/entity glows and prompt/overlay styling)
+  - `WORKFLOW_STATE.md` (status, notes, tests, next-agent handoff)
+- Astronaut sprite pass (planned):
+  - `assets/sprites/` (new royalty-free sprite files for player/enemy/projectile visuals)
+  - `game.js` (sprite loading/rendering integration; preserve mechanics/controls)
+  - `README.md` (optional attribution/license note for royalty-free assets)
+  - `WORKFLOW_STATE.md` (planning/debate/handoff updates)
+- Astronaut sprite pass (implemented this pass):
+  - `assets/sprites/player-astronaut.svg` (new astronaut-with-pistol player sprite)
+  - `assets/sprites/enemy-drone.svg` (new enemy sprite)
+  - `assets/sprites/projectile-bolt.svg` (new projectile sprite)
+  - `game.js` (sprite preload + rendering integration with geometric fallback kept)
+  - `README.md` (added sprite attribution/license note)
+  - `WORKFLOW_STATE.md` (implementor status/results handoff updates)
+- Viewport-fit bug-fix pass (planned):
+  - `style.css` (root/body/app viewport sizing + overflow containment)
+  - `index.html` (container hooks only if needed)
+  - `WORKFLOW_STATE.md` (planning/debate/handoff updates)
+- Viewport-fit bug-fix pass (implemented this pass):
+  - `style.css` (added full-viewport sizing + document overflow containment; preserved modal internal scrolling)
+  - `WORKFLOW_STATE.md` (implementor status/results handoff updates)
+- Revert + remap pass (planned):
+  - `style.css` (revert viewport-fit overflow/height containment edits)
+  - `game.js` (movement key mapping to J/K/L/I only; remove arrow movement bindings)
+  - `index.html` (controls hint text update)
+  - `WORKFLOW_STATE.md` (planning/debate/handoff updates)
+- Revert + remap pass (implemented this pass):
+  - `style.css` (reverted only the viewport-fit containment additions from the most recent patch)
+  - `game.js` (movement mapping changed to J/K/L/I only; arrow movement bindings removed)
+  - `index.html` (controls hint text updated to J/K/L/I)
+  - `WORKFLOW_STATE.md` (implementor status/results handoff updates)
+- Config fix:
+  - `opencode.json` (`agent.debater.model` set to `github-copilot/gpt-5.6-luna`)
+
+## Current Status
+- Revert + remap implementation complete:
+  - Reverted only the recent viewport-fit CSS containment changes (document/app full-viewport overflow lock) in `style.css`.
+  - Updated movement keys to J/K/L/I-only (`I` up, `K` down, `J` left, `L` right) in `game.js`.
+  - Arrow keys no longer participate in movement logic.
+  - Kept all other controls unchanged (`mouse` aim/fire, `E` interact, `R` restart).
+  - Preserved rover modal behavior/content and sprite rendering/fallback behavior.
+  - Ready for reviewer validation.
+- Content-expansion implementation complete for rover intel modal.
+- Updated modal now renders NASA-hosted image, detailed mission fields, mission objective, achievements list, and both text/image attribution links.
+- Added null-safe detail rendering (`Not available`) and image fallback behavior (`Image not available` / `Image failed to load`) to prevent UI breakage.
+- Existing modal behavior preserved: hidden by default, close via button/backdrop/keyboard, gameplay pause while modal is open and resume on close.
+- Ready for reviewer validation of expanded content layout, field completeness, and fallback behavior.
+- Phase 1 (Clarify) reopened for regression: modal content not showing.
+- Root cause identified with user: game launched via `file://` direct open, causing data loading issues.
+- Phase 2 complete for runtime setup request; Node/npm method confirmed.
+- Phase 3 plan updated and ready for debater review.
+- Viewport-fit scrolling fix implementation complete:
+  - Locked `html`, `body`, and app shell to viewport-sized layout (`100vh` with `100dvh` override) and disabled document-level overflow.
+  - Converted game shell/canvas region to a bounded flex column so HUD + canvas + controls fit within one viewport without page scrollbars.
+  - Kept gameplay controls/mappings and game logic untouched; modal remains usable with internal panel scrolling.
+- Ready for reviewer validation of no-page-scroll behavior during arrow-key gameplay.
+- Phase 1 (Clarify) reopened for keyboard-scroll bug: page moves when arrow keys are used.
+- Phase 2 complete for keyboard-scroll bug:
+  - User prefers a viewport-layout fix: make the game 100% of the viewport to prevent page movement.
+- Phase 3 plan updated and ready for debater review.
+- Debater handoff attempted for viewport-fit bug-fix but blocked by model routing error.
+- Plan accepted with fallback critique; ready for implementor handoff.
+- Phase 1 (Clarify) reopened for new request:
+  - Revert last implemented change.
+  - Change movement keys to J/K/L/I.
+- Phase 2 complete for revert + remap request:
+  - Revert target confirmed: only viewport-fit patch.
+  - Movement confirmed: J/K/L/I only.
+  - Other controls unchanged.
+- Phase 3 plan updated and ready for debater review.
+- Debater handoff attempted for revert+remap plan but blocked by model routing error.
+- Plan accepted with fallback critique; ready for implementor handoff.
+- Astronaut sprite visual pass implemented (player/enemy/projectile):
+  - Added sprite assets under `assets/sprites/` and wired them in `game.js` rendering only.
+  - Preserved existing gameplay dimensions/hitboxes/physics by keeping all collision math unchanged.
+  - Added reliable fallback to previous geometric renderer whenever a sprite is not loaded.
+  - Preserved projectile visual orientation by rotating projectile sprite from existing velocity vector.
+  - Controls, wave logic, objective flow, and rover intel modal behavior/content remain unchanged.
+- Ready for reviewer validation.
+- Phase 1 (Clarify) reopened for new request: player sprite should be astronaut with pistol.
+- Clarifications received: image sprite required; source should be royalty-free.
+- Scope clarified: apply sprite visual restyle across all relevant entities (not player-only).
+- Phase 2 complete for astronaut sprite request; Phase 3 plan updated and ready for debater review.
+- Debater handoff attempted for astronaut sprite request but blocked by model routing error.
+- Plan accepted with fallback critique; ready for implementor handoff.
+- Kid-friendly modernization implementation complete (visual-only scope):
+  - Controls preserved exactly (`WASD/arrows`, mouse aim/fire, `E`, `R`) with no input handler rewiring.
+  - No gameplay/mechanics/balance changes applied (enemy/wave/objective/win-loss logic untouched).
+  - No audio/music changes applied.
+  - Rover intel modal behavior/content semantics preserved (same fields, attribution links, pause/close behavior).
+- Ready for reviewer validation of visual-only regression safety and kid-friendly NASA-dashboard styling.
+- Debater handoff attempted for kid-friendly modernization but blocked by model routing error.
+- Plan accepted with fallback critique; ready for implementor handoff.
+- Debater handoff attempted for runtime setup but blocked by model config issue.
+- Plan accepted with fallback critique; ready for implementor handoff.
+- Runtime setup implementation complete:
+  - Added root `package.json` with `serve` script using `http-server` on `127.0.0.1:8080` and cache disabled.
+  - Added run instructions to `README.md`: `npm install` → `npm run serve` → open `http://127.0.0.1:8080`.
+  - Added explicit note explaining why direct `file://` launch can prevent rover JSON/modal data from loading.
+- Validation complete for runtime setup (package JSON parse + serve script help output).
+- Ready for reviewer handoff.
+- Phase 1 (Clarify) reopened for local-image migration request.
+- Phase 2 complete for local-image migration (download images, JPEG).
+- Phase 3 plan updated and ready for debater review.
+- Debater handoff attempted for local-image migration but blocked by model config issue.
+- Plan accepted with fallback critique; ready for implementor handoff.
+- Local-image migration implementation complete:
+  - Added six local JPEG rover images under `assets/rovers/`.
+  - Updated `data/rovers.json` `imageUrl` fields to local relative paths.
+  - Preserved `imageSource` and `source` NASA attribution links (no metadata regression).
+  - Kept existing modal rendering/fallback behavior without `game.js` changes.
+- Verification complete for implementation checks (`node --check game.js`, JSON parse, referenced-image existence).
+- Ready for reviewer validation.
+- Phase 1 (Clarify) reopened for user-provided image source overrides.
+- Phase 2 complete for image-source override request.
+- Phase 3 plan updated and ready for debater review.
+- Debater handoff attempted for image override but blocked by model config issue.
+- Plan accepted with fallback critique; ready for implementor handoff.
+- Image override implementation complete:
+  - Downloaded and replaced local JPEG assets for Opportunity, Ingenuity, Curiosity, and Spirit using exact user-provided URLs.
+  - Kept Sojourner and Perseverance local image files unchanged.
+  - Updated `data/rovers.json` `imageSource.url` for those 4 entries to exactly match provided URLs.
+  - Kept runtime `imageUrl` values on local `assets/rovers/*.jpg` paths (no remote runtime image dependency).
+- Verification complete for this pass (JSON parse + MIME/type checks for referenced rover assets).
+- Ready for reviewer handoff.
+- Phase 1 (Clarify) reopened for modernization request.
+- Phase 2 complete for modernization request; preferences confirmed.
+- Phase 3 plan prepared for implementation.
+- Debater handoff attempted for modernization but blocked by model config issue.
+- Plan accepted with fallback critique; ready for implementor handoff.
+- Debater model config updated to `github-copilot/gpt-5.6-luna` in `opencode.json`.
+- opencode restart required for new debater model to take effect.
+- Phase 1 (Clarify) reopened for new request: make the game more modern and beautiful for kids.
+- Phase 2 complete for latest request:
+  - Age target: 8–11.
+  - Visual-only scope.
+  - Style: playful NASA dashboard.
+  - No audio.
+  - Controls unchanged.
+- Phase 3 plan updated and ready for debater review.
+
+## Acceptance Criteria
+- Browser-playable mini-game built with HTML + JavaScript.
+- Mars rover theme is visible in gameplay.
+- Keyboard + mouse controls are functional.
+- Includes visible animation during gameplay.
+- Includes survival loop with clear failure condition.
+- Single-player only.
+- Enemy waves escalate difficulty over time.
+- Player can discover all required Mars rover/robot targets.
+- Player can collect rocket parts and assemble/launch rocket to win.
+- HUD clearly shows survival and collection progress.
+- On rover discovery, player sees a modal popup with NASA-sourced rover information from local JSON.
+- While rover modal is open, gameplay is paused (no enemy/wave/player simulation advances).
+- Modal is not visible on initial load.
+- Clicking modal close button hides the modal and resumes gameplay.
+- Each rover/Ingenuity modal includes one NASA image loaded from remote NASA URL.
+- Modal displays full detailed mission fields: launch date, landing date, status, mission objective, key achievements, mission duration, operator/agency.
+- Modal includes clickable NASA attribution/source links for textual info and image credit.
+- Modal layout is large/readable and supports full detail visibility.
+- Rover modal images render from local JPEG files referenced in `data/rovers.json`.
+- NASA attribution links remain visible/clickable in modal.
+- Visual style reflects a modern NASA mission-dashboard aesthetic.
+- HUD/modal layout looks cleaner and more contemporary on desktop.
+- Canvas visuals include noticeable polish effects (background treatment + atmospheric/feedback enhancements).
+- Existing gameplay behavior, controls, objectives, and modal pause/close behavior remain unchanged.
+- Visual style feels modern, playful, and appealing for kids aged 8–11.
+- Theme remains NASA mission-dashboard, adapted with kid-friendly presentation.
+- Changes are visual-only: no gameplay balance/mechanics/control mapping changes.
+- No audio/music added.
+- Controls remain exactly as before.
+- Player is rendered as an astronaut-with-pistol image sprite.
+- Enemy and projectile visuals are restyled to match the sprite-based art direction.
+- Sprite assets are royalty-free and attribution/license note is included where appropriate.
+- Changes remain visual-only with no gameplay/control/mechanics regressions.
+- Game layout occupies the full viewport (single-screen app layout) on desktop.
+- No page/document scrolling occurs during normal gameplay key usage.
+- Existing HUD, modal behavior, and gameplay controls continue to work as before.
+- Recent viewport-fit CSS changes are reverted, restoring prior layout behavior.
+- Movement controls use J/K/L/I only (`I` up, `K` down, `J` left, `L` right).
+- Arrow keys do not move the player.
+- Mouse aim/fire, `E` interact, and `R` restart remain unchanged.
+- No regressions to gameplay logic, sprites, HUD, or rover modal behavior/content.
+
+## Next Agent
+- `reviewer` — review viewport-fit revert scope and J/K/L/I-only movement remap for regressions.
+
+## Implementation Notes
+- Implemented full browser-playable Canvas prototype with explicit states: `playing`, `game_over`, `victory`.
+- Added `index.html` shell with:
+  - HUD fields for health, wave, rover discoveries, rocket parts, and objective text.
+  - Canvas viewport and control hints (WASD/arrows, mouse aim, click fire, `E` interact, `R` restart).
+- Added `style.css` Mars-themed UI styling:
+  - Dark/red Mars palette, panelized HUD, bordered canvas, readable control/footer text.
+- Added `game.js` core systems:
+  - Player movement (keyboard), mouse aiming, click shooting.
+  - Enemy waves with escalating spawn count/speed/health/damage and inter-wave delay.
+  - Survival failure condition via player health reaching zero.
+  - Exploration objectives: discover rover/robot beacons (`E`) and collect rocket parts (`E`).
+  - Win flow: once all discoveries + parts collected, assemble at launch zone (`E`) and complete launch timer to victory.
+  - HUD live progress updates + objective guidance by phase.
+  - Animated rendering using `requestAnimationFrame` with timestamp-based delta time.
+  - On-canvas prompts for nearby interactions and end-state overlays.
+- Context/API verification (via MDN web docs as required):
+  - `HTMLCanvasElement.getContext("2d")` and Canvas 2D drawing APIs (`fillRect`, `arc`, `fillText`, etc.).
+  - `window.requestAnimationFrame(callback)` one-shot behavior and timestamp-driven frame updates.
+- Manual verification notes:
+  - Confirmed JS parses with `node --check game.js`.
+  - Verified controls and objective/state wiring in code paths:
+    - `E` interaction for discovery/part/assembly.
+    - Explicit transitions to `game_over` and `victory`.
+    - Wave increment and respawn logic when wave cleared.
+    - HUD counters/objective text update from current game progress.
+  - Browser runtime playtest not executed in this CLI environment.
+- Newly implemented rover-intel feature:
+  - Added `data/rovers.json` with required roster entries: Sojourner, Spirit, Opportunity, Curiosity, Perseverance, Ingenuity.
+  - Each rover entry includes `missionSummary`, `keyFacts[]`, and `source { title, url }` attribution fields.
+  - Added modal markup to `index.html`:
+    - `#intelModal`, close button, summary, facts list, and source area.
+    - Backdrop-click close support and dialog semantics (`role="dialog"`, `aria-modal="true"`).
+  - Added modal styles to `style.css`:
+    - Overlay/backdrop, panel styling, close button, source link styling.
+  - Integrated intel data flow in `game.js`:
+    - Loads local JSON via `fetch("data/rovers.json")` at startup.
+    - Maps entries by rover name and resolves discovery names to records.
+    - On first discovery interaction (`E`), opens modal and records seen entries to prevent duplicate auto-popups.
+    - Added fallback intel content when JSON record is missing or data load fails.
+  - Gameplay pause behavior:
+    - While modal is open, `update()` short-circuits simulation (player movement/fire, enemies, bullets, dust drift, wave timers/spawns, launch countdown).
+    - Interaction prompt suppressed while modal is open.
+    - Closing modal resumes normal updates cleanly.
+  - Input/controls preservation:
+    - Existing WASD/arrows, mouse aim/click fire, `E` interact, `R` restart kept.
+    - Added modal keyboard close support (`Escape`, `Enter`, `Space`) while open.
+- API verification note:
+  - No external library/framework APIs were added; implementation uses standard browser DOM/Fetch APIs already used by the project.
+  - Context7 check: not applicable for third-party framework usage in this change (vanilla browser APIs only).
+- Implemented targeted modal bug fix (no gameplay refactor):
+  - `index.html`:
+    - Set `#intelModal` to hidden by default with `hidden` attribute in markup.
+    - Removed reliance on startup `.hidden` class for modal visibility.
+  - `style.css`:
+    - Added `.intel-modal[hidden] { display: none; }` so modal visibility is driven by one state.
+  - `game.js`:
+    - Added `setIntelModalOpen(isOpen)` helper as single visibility + pause sync point.
+    - `openIntelModal()` now calls `setIntelModalOpen(true)`.
+    - `closeIntelModal()` now calls `setIntelModalOpen(false)`.
+    - Preserved existing close behavior wiring for close button, backdrop click, and keyboard (`Escape`/`Enter`/`Space`) through shared close function.
+    - Preserved `intelOpen` pause gate in update/render prompt flow.
+- API confirmation used for this bug fix:
+  - Verified `HTMLElement.hidden` behavior via MDN (`HTMLElement.hidden` reflects/toggles the `hidden` attribute).
+- Implemented approved rover intel content-expansion with minimal scope changes:
+  - `data/rovers.json`
+    - Replaced prior summary/facts schema with expanded schema for required roster entries:
+      - `name`, `imageUrl`, `missionSummary`, `launchDate`, `landingDate`, `status`, `missionObjective`, `keyAchievements[]`, `missionDuration`, `operator`, `source`, `imageSource`.
+    - Added NASA URLs for both mission source attribution and image attribution fields.
+  - `index.html`
+    - Expanded modal structure to include:
+      - image region (`#intelImage`) and fallback block (`#intelImageFallback`),
+      - mission detail fields (`launchDate`, `landingDate`, `status`, `missionDuration`, `operator`),
+      - objective text, achievements list, and separate source/image-source attribution lines.
+    - Preserved existing close control and dialog accessibility semantics.
+  - `style.css`
+    - Enlarged modal panel width and max height.
+    - Added scroll-safe modal content (`overflow: auto`) for long details.
+    - Added two-column media/content layout with responsive single-column fallback for smaller screens.
+    - Styled detail rows and image fallback panel for readability.
+  - `game.js`
+    - Expanded `intelUi` bindings for all new modal fields.
+    - Replaced old `keyFacts` rendering with new detailed field rendering.
+    - Added null-safe helpers (`asText`, `asAttribution`) to render fallback values when data is missing.
+    - Added `renderIntelImage()` with robust image failure handling using image `onerror`/`onload` and fallback block visibility.
+    - Added `renderAttribution()` that creates safe external links with `target="_blank"` and `rel="noopener noreferrer"`.
+    - Kept existing pause/resume and close wiring unchanged.
+- API verification note for this implementation:
+  - Verified `HTMLElement.hidden` and element `error` event behavior via MDN web docs for modal visibility and image fallback event handling.
+  - Context7 tool is not exposed in this environment; used MDN references as the authoritative API source.
+- Implemented runtime setup request with minimal scope:
+  - Added new root `package.json`:
+    - `scripts.serve`: `http-server . -a 127.0.0.1 -p 8080 -c-1`
+    - `devDependencies.http-server`: `^14.1.1`
+  - Ran `npm install` to install and lock static server dependency.
+  - Updated `README.md` with a concise "Run the game locally (Node/npm)" section:
+    - install deps,
+    - start server via npm script,
+    - open explicit localhost URL,
+    - reason `file://` causes JSON fetch/modal data issues.
+- Runtime API/doc verification:
+  - Context7 MCP is unavailable in this environment.
+  - Verified `http-server` CLI usage/options via upstream README (http-party/http-server) confirming `-p`, `-a`, and `-c-1` behavior.
+- Implemented approved local-image migration with minimal scope:
+  - Created `assets/rovers/` and added six JPEG files for required roster:
+    - `sojourner.jpg`, `spirit.jpg`, `opportunity.jpg`, `curiosity.jpg`, `perseverance.jpg`, `ingenuity.jpg`.
+  - Updated `data/rovers.json` for all six entries:
+    - Replaced remote `imageUrl` values with local paths (`assets/rovers/<name>.jpg`).
+    - Preserved existing NASA `source` and `imageSource` attribution objects.
+  - Added README runtime note that rover modal images are now local bundled assets.
+  - `game.js` required no changes because existing image rendering/fallback already supports relative paths and broken-image handling.
+- Image source retrieval note:
+  - Original `mars.nasa.gov` image endpoints returned HTML in this environment.
+  - Downloaded JPEG assets from NASA Images CDN (`images-assets.nasa.gov`) using mission image IDs to ensure valid local JPEG files.
+- API verification note:
+  - Context7 MCP is not available in this environment; no third-party framework API changes were required.
+- Implemented approved user-provided image override request with minimal scope:
+  - Overwrote the following local files with downloaded JPEG content:
+    - `assets/rovers/opportunity.jpg` ← `https://cdn.mos.cms.futurecdn.net/nmZohGRNKTUHu5834T3KYF-750-80.jpg`
+    - `assets/rovers/ingenuity.jpg` ← `https://cdn.mos.cms.futurecdn.net/ipKcWFaLMsJ8FeXAVZ6BrR-1200-80.jpg`
+    - `assets/rovers/curiosity.jpg` ← `https://upload.wikimedia.org/wikipedia/commons/f/f3/Curiosity_Self-Portrait_at_%27Big_Sky%27_Drilling_Site.jpg`
+    - `assets/rovers/spirit.jpg` ← `https://planetary.s3.amazonaws.com/image/mer-concept-browse_2.jpg`
+  - Updated only `imageSource.url` fields for Spirit, Opportunity, Curiosity, and Ingenuity in `data/rovers.json` to match exact provided URLs.
+  - Preserved mission `source` metadata and preserved local runtime image paths in `imageUrl`.
+  - No `game.js` logic changes required.
+- API/context verification note for this pass:
+  - Context7 MCP is unavailable in this environment.
+  - No external library/framework API usage was introduced; change is asset + JSON metadata only.
+- Implemented approved kid-friendly NASA-dashboard modernization pass with minimal, visual-only changes:
+  - `index.html`
+    - Added presentation-only HUD framing copy (`NASA Junior Mission Control`, subtitle).
+    - Added webfont includes (Google Fonts: Baloo 2 + Inter) for friendlier kid-facing typography.
+    - Converted HUD metric spans to pill/chip presentation classes without changing IDs or data wiring.
+    - Kept controls text and mappings unchanged.
+  - `style.css`
+    - Added design tokens (palette, spacing, radii, typography) for safe broad uplift.
+    - Re-themed shell/HUD/canvas/modal to playful NASA dashboard style with rounded panels, stronger grouping, and improved contrast.
+    - Increased readability for ages 8–11 (larger title hierarchy, clearer objective text, badge-like HUD chips, improved modal detail rows).
+    - Preserved modal structure/field semantics and attribution-link visibility.
+  - `game.js`
+    - Added centralized `RENDER_THEME` constants and updated draw styles only (terrain gradient, ambient glow, dust/grid colors, entity glow accents, prompt/overlay typography/colors).
+    - No simulation/input/combat/wave/objective condition changes.
+    - No modal behavior changes.
+- Context/API verification for this implementation:
+  - Context7 tool is not available in this environment, so direct Context7 lookup could not be executed.
+  - No new external library/framework APIs were introduced; changes are limited to standard Canvas/CSS/DOM presentation usage already present in the project.
+- Implemented approved astronaut sprite pass across relevant entities (visual-only):
+  - Added `SPRITE_PATHS` + `sprites` asset registry in `game.js` and preloaded images via `new Image()`.
+  - Added `createSpriteAsset()` loader with `onload`/`onerror` state flags.
+  - Updated render layer only:
+    - `drawPlayer()` now draws astronaut sprite when loaded; otherwise uses `drawPlayerFallback()` (existing geometric look).
+    - `drawEnemies()` now draws enemy sprite when loaded; otherwise uses `drawEnemyFallback()`.
+    - `drawBullets()` now draws projectile sprite rotated using current bullet velocity direction; otherwise uses `drawBulletFallback()`.
+  - Kept simulation logic untouched:
+    - no changes to input handling (`WASD/arrows`, mouse aim/fire, `E`, `R`),
+    - no changes to enemy/bullet/player movement, damage, wave flow, objective progression, or modal pause behavior.
+  - Added README sprite attribution note indicating assets are royalty-free custom SVG artwork for project use.
+- API verification note for this pass:
+  - Context7 MCP is unavailable in this environment.
+  - Verified browser API usage with MDN references fetched during implementation:
+    - `CanvasRenderingContext2D.drawImage()`
+    - `HTMLImageElement: Image() constructor`
+- Implemented approved viewport-fit arrow-key scrolling fix with minimal CSS-only scope:
+  - `style.css`
+    - Added root containment: `html, body { width: 100%; height: 100%; overflow: hidden; }`.
+    - Added `body { overscroll-behavior: none; }` to prevent viewport chaining/bounce during gameplay.
+    - Updated `.game-shell` to fixed viewport occupancy with robust sizing fallback: `height: 100vh; height: 100dvh;`, plus `display: flex`, `flex-direction: column`, and `overflow: hidden`.
+    - Updated `.canvas-wrap` to `flex: 1 1 auto; min-height: 0; overflow: hidden;` so the canvas area fills remaining viewport space without pushing document height.
+    - Updated `canvas` to `height: 100%` so game surface scales inside the viewport-bounded wrapper.
+    - Kept modal usable while page scroll is disabled by retaining `.intel-modal__panel { overflow: auto; }` and adding `max-height: min(88dvh, 920px)` in addition to existing `88vh`.
+  - No gameplay logic/input mapping/HUD data/modal behavior code paths changed.
+- Context/API verification for this implementation:
+  - Context7 MCP is not available in this environment.
+  - No third-party library/framework APIs were introduced; change is pure CSS layout/overflow behavior.
+- Implemented approved revert + key-remap change with minimal scope:
+  - `style.css`
+    - Reverted viewport-fit containment additions from the most recent patch only:
+      - removed `html, body { width: 100%; height: 100%; overflow: hidden; }`
+      - removed `body { overscroll-behavior: none; }`
+      - removed `.game-shell` viewport lock (`height: 100vh; height: 100dvh; overflow: hidden;`)
+      - removed `.canvas-wrap` flex/min-height containment additions
+      - removed `canvas { height: 100%; }`
+      - removed modal `max-height: min(88dvh, 920px)` addition
+    - Left all other styling untouched.
+  - `game.js`
+    - Updated movement checks in `updatePlayer()` from WASD/arrow keys to J/K/L/I only.
+    - No changes to aim/fire, interaction, restart, modal, sprites, wave, or combat logic.
+  - `index.html`
+    - Updated visible controls hint from `Move (WASD / Arrows)` to `Move (J/K/L/I)`.
+- Context/API verification for this implementation:
+  - Context7 MCP is unavailable in this environment.
+  - No external library/framework API behavior was changed; edits are keybinding condition updates + CSS/text revert.
+
+## Review Findings
+- Reviewer task invocation failed: `Model not found: github-copilot/gpt-5.4`.
+- No reviewer analysis produced yet; needs retry after model config fix.
+- Retry attempt for viewport-fit regression review also failed with same routing error: `Model not found: github-copilot/gpt-5.4`.
+- Reviewer output still pending due to environment model routing issue.
+
+## Test Results
+- `node --check game.js` ✅ (no syntax errors)
+- `node -e "JSON.parse(require('node:fs').readFileSync('data/rovers.json','utf8')); console.log('rovers.json ok')"` ✅
+- Manual code-path checks completed for:
+  - Discovery -> first-time modal open
+  - Modal close (button, backdrop, keyboard)
+  - `intelOpen` pause gate in simulation update loop
+  - Missing-intel fallback rendering path
+  - Limitation: browser runtime playtest not executable in this CLI-only environment
+- Bug-fix verification notes (manual/code-path):
+  - Default state: modal markup now starts hidden (`hidden` present on `#intelModal`).
+  - Close button path: `#intelClose` click → `closeIntelModal()` → `setIntelModalOpen(false)` → `intelOpen = false`, `root.hidden = true`.
+  - Backdrop path preserved: backdrop `data-close-intel="true"` click → `closeIntelModal()`.
+  - Keyboard path preserved: when modal open, `Escape`/`Enter`/`Space` → `closeIntelModal()` with `preventDefault()`.
+- Content-expansion verification notes (manual/code-path):
+  - Modal now renders full field set from JSON: image, summary, launch/landing/status/duration/operator, objective, achievements, source, and image source.
+  - Null-safe fallback verified in render helpers:
+    - Missing or blank text fields render as `Not available`.
+    - Missing achievements list renders single fallback list item.
+  - Image resilience verified in code path:
+    - Missing image URL shows fallback panel (`Image not available`).
+    - Failed image load triggers `onerror` fallback panel (`Image failed to load`) and hides broken image.
+  - External attribution links verified in renderer to use `target="_blank"` and `rel="noopener noreferrer"`.
+- Runtime setup verification:
+  - `node -e "JSON.parse(require('node:fs').readFileSync('package.json','utf8')); console.log('package.json ok')"` ✅
+  - `npm install` ✅ (installed `http-server`, generated `package-lock.json`)
+  - `npm run serve -- --help` ✅ (serve script resolves and prints `http-server` usage)
+- Image override verification (this pass):
+  - `file --mime-type assets/rovers/opportunity.jpg assets/rovers/ingenuity.jpg assets/rovers/curiosity.jpg assets/rovers/spirit.jpg assets/rovers/sojourner.jpg assets/rovers/perseverance.jpg` ✅
+    - All reported `image/jpeg` (confirmed files are images, not HTML/error payloads).
+  - `node -e "JSON.parse(require('node:fs').readFileSync('data/rovers.json','utf8')); console.log('rovers.json ok')"` ✅
+- Kid-friendly modernization verification (this pass):
+  - `node --check game.js` ✅ (no syntax errors after rendering-theme updates)
+- Astronaut sprite pass verification (this pass):
+  - `node --check game.js` ✅ (no syntax errors after sprite rendering integration)
+  - `ls "assets/sprites"` ✅ (`enemy-drone.svg`, `player-astronaut.svg`, `projectile-bolt.svg` present)
+  - `node -e "const fs=require('node:fs'); const files=['assets/sprites/player-astronaut.svg','assets/sprites/enemy-drone.svg','assets/sprites/projectile-bolt.svg']; for (const f of files){const s=fs.statSync(f); if(!s.isFile()||s.size===0) throw new Error('invalid '+f);} console.log('sprite assets ok');"` ✅
+- Viewport-fit scrolling fix verification (this pass):
+  - `node --check game.js` ✅ (baseline sanity; JS unchanged and valid)
+  - `rg -n "id=\"health\"|id=\"wave\"|id=\"discoveries\"|id=\"parts\"|id=\"objective\"|id=\"intelModal\"|html,|overflow: hidden;|height: 100dvh;|max-height: min\(88dvh, 920px\);" index.html style.css` ✅
+    - Confirmed expected HUD/modal hooks still present in `index.html` and new viewport/overflow guard rules present in `style.css`.
+- Revert + remap verification (this pass):
+  - `node --check game.js` ✅ (no syntax errors)
+  - `rg -n "keys\.(w|a|s|d)|keys\.arrow(up|down|left|right)" game.js` ✅ (no matches; arrow/WASD movement bindings removed)
+  - `rg -n "keys\.i|keys\.k|keys\.j|keys\.l" game.js` ✅
+    - Matches at movement checks in `updatePlayer()`:
+      - `if (keys.i) moveY -= 1;`
+      - `if (keys.k) moveY += 1;`
+      - `if (keys.j) moveX -= 1;`
+      - `if (keys.l) moveX += 1;`
+  - `rg -n "Move \(J/K/L/I\)|Move \(WASD / Arrows\)" index.html` ✅
+    - `Move (J/K/L/I)` present; old hint absent.
+  - `rg -n "100dvh|overscroll-behavior|html,|overflow: hidden;|height: 100%|height: 100vh;" style.css` ✅
+    - No viewport-fit containment signatures remain from the reverted patch; only pre-existing style usage remains (`min-height: 100vh`, `.canvas-wrap { overflow: hidden; }`).
+
+Handoff note: @reviewer please review the targeted revert+remap change for (1) strict revert of only the recent viewport-fit containment CSS edits, (2) movement mapped to J/K/L/I only with no arrow-key movement path remaining, and (3) no regressions to rover modal behavior/content, sprite rendering fallback, or non-movement controls (`mouse`, `E`, `R`).
+
+## Security Findings
+-
+
+## Lint Results
+-
+
+## Commit Message Draft
+-

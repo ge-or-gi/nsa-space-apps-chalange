@@ -1,0 +1,146 @@
+[
+  {
+    "name": "Sojourner",
+    "imageUrl": "assets/rovers/sojourner.jpg",
+    "missionSummary": "Sojourner, delivered by Mars Pathfinder, became the first rover to operate on another planet and proved mobile surface science on Mars was feasible.",
+    "launchDate": "December 4, 1996",
+    "landingDate": "July 4, 1997",
+    "status": "Mission complete",
+    "missionObjective": "Demonstrate low-cost Mars landing and rover operations while analyzing rocks and soil in Ares Vallis.",
+    "keyAchievements": [
+      "First successful rover operations on Mars.",
+      "Returned hundreds of images and in-situ elemental measurements.",
+      "Operated far beyond its planned 7-sol surface mission."
+    ],
+    "missionDuration": "83 sols (planned: 7 sols)",
+    "operator": "NASA / JPL",
+    "source": {
+      "title": "NASA Science - Mars Pathfinder",
+      "url": "https://science.nasa.gov/mission/mars-pathfinder/"
+    },
+    "imageSource": {
+      "title": "NASA Mars Image Library - Sojourner",
+      "url": "https://mars.nasa.gov/mars2020/multimedia/images/"
+    }
+  },
+  {
+    "name": "Spirit",
+    "imageUrl": "assets/rovers/spirit.jpg",
+    "missionSummary": "Spirit, one of NASA's twin Mars Exploration Rovers, studied Gusev Crater for evidence of past water activity and environmental change.",
+    "launchDate": "June 10, 2003",
+    "landingDate": "January 3, 2004 (PST)",
+    "status": "Mission complete",
+    "missionObjective": "Characterize rocks and soils and search for signs of past water-driven processes.",
+    "keyAchievements": [
+      "Found strong evidence of hydrothermal and water-altered environments.",
+      "Operated from 2004 to 2010, far beyond a 90-sol design life.",
+      "Traversed diverse terrain in Gusev Crater and Columbia Hills."
+    ],
+    "missionDuration": "~6 years of surface operations",
+    "operator": "NASA / JPL",
+    "source": {
+      "title": "NASA Science - Spirit and Opportunity",
+      "url": "https://science.nasa.gov/mission/mars-exploration-rovers-spirit-and-opportunity/"
+    },
+    "imageSource": {
+      "title": "NASA Mars Exploration Rover Image Archive",
+      "url": "https://planetary.s3.amazonaws.com/image/mer-concept-browse_2.jpg"
+    }
+  },
+  {
+    "name": "Opportunity",
+    "imageUrl": "assets/rovers/opportunity.jpg",
+    "missionSummary": "Opportunity explored Meridiani Planum and delivered major discoveries about ancient water and long-term habitability on Mars.",
+    "launchDate": "July 7, 2003",
+    "landingDate": "January 24, 2004 (PST)",
+    "status": "Mission complete",
+    "missionObjective": "Investigate geology and search for evidence that liquid water once persisted at the surface.",
+    "keyAchievements": [
+      "Confirmed sedimentary rocks formed in ancient wet environments.",
+      "Operated nearly 15 years after a planned 90-sol mission.",
+      "Traveled more than a marathon distance on Mars."
+    ],
+    "missionDuration": "~14 years, 7 months",
+    "operator": "NASA / JPL",
+    "source": {
+      "title": "NASA Science - Spirit and Opportunity",
+      "url": "https://science.nasa.gov/mission/mars-exploration-rovers-spirit-and-opportunity/"
+    },
+    "imageSource": {
+      "title": "NASA Mars Exploration Rover Image Archive",
+      "url": "https://cdn.mos.cms.futurecdn.net/nmZohGRNKTUHu5834T3KYF-750-80.jpg"
+    }
+  },
+  {
+    "name": "Curiosity",
+    "imageUrl": "assets/rovers/curiosity.jpg",
+    "missionSummary": "Curiosity (Mars Science Laboratory) studies Gale Crater to determine whether ancient Mars could have supported microbial life.",
+    "launchDate": "November 26, 2011",
+    "landingDate": "August 5, 2012 (PDT)",
+    "status": "Active",
+    "missionObjective": "Assess ancient habitability through geology, climate, and organic chemistry measurements.",
+    "keyAchievements": [
+      "Found ancient lakebed environments with key ingredients for life.",
+      "Detected organic molecules in Martian rocks.",
+      "Documented climate and radiation conditions relevant to future exploration."
+    ],
+    "missionDuration": "Active since 2012",
+    "operator": "NASA / JPL",
+    "source": {
+      "title": "NASA Science - Curiosity",
+      "url": "https://science.nasa.gov/mission/msl-curiosity/"
+    },
+    "imageSource": {
+      "title": "NASA MSL Multimedia Gallery",
+      "url": "https://upload.wikimedia.org/wikipedia/commons/f/f3/Curiosity_Self-Portrait_at_%27Big_Sky%27_Drilling_Site.jpg"
+    }
+  },
+  {
+    "name": "Perseverance",
+    "imageUrl": "assets/rovers/perseverance.jpg",
+    "missionSummary": "Perseverance (Mars 2020) explores Jezero Crater, seeks signs of ancient life, and caches samples for possible return to Earth.",
+    "launchDate": "July 30, 2020",
+    "landingDate": "February 18, 2021",
+    "status": "Active",
+    "missionObjective": "Search for biosignatures, characterize geology and climate, and collect samples for future return missions.",
+    "keyAchievements": [
+      "Collected and sealed multiple sample tubes for future Mars Sample Return work.",
+      "Demonstrated oxygen production from Mars atmosphere via MOXIE.",
+      "Mapped and analyzed delta deposits and crater-floor geology."
+    ],
+    "missionDuration": "Active since 2021",
+    "operator": "NASA / JPL",
+    "source": {
+      "title": "NASA Science - Mars 2020 Perseverance",
+      "url": "https://science.nasa.gov/mission/mars-2020-perseverance/"
+    },
+    "imageSource": {
+      "title": "NASA Mars 2020 Multimedia Gallery",
+      "url": "https://mars.nasa.gov/mars2020/multimedia/images/"
+    }
+  },
+  {
+    "name": "Ingenuity",
+    "imageUrl": "assets/rovers/ingenuity.jpg",
+    "missionSummary": "Ingenuity, carried to Mars with Perseverance, achieved the first powered, controlled flight on another world and expanded aerial scouting concepts.",
+    "launchDate": "July 30, 2020 (with Perseverance)",
+    "landingDate": "February 18, 2021",
+    "status": "Mission complete",
+    "missionObjective": "Demonstrate powered flight in Mars' thin atmosphere as a technology pathfinder.",
+    "keyAchievements": [
+      "Performed first controlled powered flight on another planet (April 19, 2021).",
+      "Completed many flights beyond its original demonstration plan.",
+      "Provided aerial reconnaissance that informed rover path planning."
+    ],
+    "missionDuration": "~3 years of operations (2021-2024)",
+    "operator": "NASA / JPL",
+    "source": {
+      "title": "NASA Science - Ingenuity",
+      "url": "https://science.nasa.gov/mission/ingenuity/"
+    },
+    "imageSource": {
+      "title": "NASA Ingenuity Mission Page",
+      "url": "https://cdn.mos.cms.futurecdn.net/ipKcWFaLMsJ8FeXAVZ6BrR-1200-80.jpg"
+    }
+  }
+]
