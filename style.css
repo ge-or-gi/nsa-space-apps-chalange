@@ -267,6 +267,49 @@ canvas {
   color: var(--muted);
 }
 
+.intel-modal__quiz {
+  margin: var(--space-3) 0;
+  padding: 0.7rem;
+  border-radius: var(--radius-md);
+  border: 1px solid color-mix(in srgb, var(--panel-border) 48%, #243b76);
+  background: rgba(126, 240, 255, 0.08);
+}
+
+.intel-modal__quiz-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+
+.intel-modal__quiz-option {
+  border: 1px solid color-mix(in srgb, var(--panel-border) 56%, #2a407e);
+  background: rgba(20, 34, 78, 0.95);
+  color: var(--text);
+  border-radius: 999px;
+  padding: 0.42rem 0.88rem;
+  font: 700 0.95rem var(--font-body);
+  cursor: pointer;
+}
+
+.intel-modal__quiz-option:hover {
+  background: rgba(255, 211, 90, 0.2);
+}
+
+.intel-modal__quiz-feedback {
+  margin: 0;
+  min-height: 1.2em;
+  font-weight: 700;
+}
+
+.intel-modal__quiz-feedback--error {
+  color: var(--danger);
+}
+
+.intel-modal__quiz-feedback--success {
+  color: var(--good);
+}
+
 .intel-modal__source a {
   color: #b9f5ff;
 }

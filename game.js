@@ -88,6 +88,9 @@ const intelUi = {
   operator: document.getElementById("intelOperator"),
   objective: document.getElementById("intelObjective"),
   achievements: document.getElementById("intelAchievements"),
+  quizPrompt: document.getElementById("intelQuizPrompt"),
+  quizOptions: document.getElementById("intelQuizOptions"),
+  quizFeedback: document.getElementById("intelQuizFeedback"),
   source: document.getElementById("intelSource"),
   imageSource: document.getElementById("intelImageSource"),
 };
@@ -117,6 +120,8 @@ let launchTimer;
 let roverIntelByName = {};
 let seenIntelEntries = new Set();
 let intelOpen = false;
+let activeDiscoveryNode = null;
+let autoCloseIntelTimer = null;
 let renderManifest = { ...DEFAULT_RENDER_MANIFEST };
 let renderAssets = createRenderAssets(renderManifest);
 
@@ -500,8 +505,7 @@ function updateWaveFlow(dt) {
 function handleInteraction() {
   for (const d of discoveries) {
     if (!d.found && distance(player.x, player.y, d.x, d.y) <= CONFIG.interactionRange) {
-      d.found = true;
-      maybeShowDiscoveryIntel(d.name);
+      maybeShowDiscoveryIntel(d);
       return;
     }
   }
@@ -881,13 +885,19 @@ function gameLoop(timestamp) {
   window.requestAnimationFrame(gameLoop);
 }
 
-function maybeShowDiscoveryIntel(name) {
-  if (seenIntelEntries.has(name)) return;
-  seenIntelEntries.add(name);
-  openIntelModal(name);
+function maybeShowDiscoveryIntel(discoveryNode) {
+  if (!discoveryNode || typeof discoveryNode.name !== "string") return;
+  openIntelModal(discoveryNode.name, discoveryNode);
 }
 
-function openIntelModal(name) {
+function openIntelModal(name, discoveryNode = null) {
+  if (autoCloseIntelTimer !== null) {
+    window.clearTimeout(autoCloseIntelTimer);
+    autoCloseIntelTimer = null;
+  }
+
+  activeDiscoveryNode = discoveryNode;
+
   const intel = roverIntelByName[name] || {
     name,
     missionSummary: "NASA intel is currently unavailable for this discovery.",
@@ -926,12 +936,119 @@ function openIntelModal(name) {
   }
 
   renderIntelImage(intel);
+  renderIntelQuiz(intel, discoveryNode);
 
   renderAttribution(intelUi.source, "Source", intel.source);
   renderAttribution(intelUi.imageSource, "Image Source", intel.imageSource);
 
   setIntelModalOpen(true);
   interactPressed = false;
+}
+
+function parseLaunchYear(launchDate) {
+  if (typeof launchDate !== "string") return null;
+  const match = launchDate.match(/\b(19|20)\d{2}\b/);
+  return match ? Number(match[0]) : null;
+}
+
+function getNameSeed(name) {
+  if (typeof name !== "string") return 0;
+  let seed = 0;
+  for (const ch of name) seed += ch.charCodeAt(0);
+  return seed;
+}
+
+function buildQuizOptions(correctYear, roverName) {
+  const offsets = [-9, -6, -4, -2, 2, 4, 6, 9, 12, -12];
+  const seed = getNameSeed(roverName);
+  const start = seed % offsets.length;
+  const wrongYears = [];
+
+  for (let i = 0; i < offsets.length && wrongYears.length < 3; i += 1) {
+    const offset = offsets[(start + i) % offsets.length];
+    const candidate = correctYear + offset;
+    if (candidate === correctYear || candidate < 1900 || candidate > 2100 || wrongYears.includes(candidate)) continue;
+    wrongYears.push(candidate);
+  }
+
+  while (wrongYears.length < 3) {
+    const bump = 14 + wrongYears.length * 3;
+    wrongYears.push(correctYear + bump);
+  }
+
+  const options = [correctYear, ...wrongYears];
+  const rotate = seed % options.length;
+  return options.slice(rotate).concat(options.slice(0, rotate));
+}
+
+function setQuizFeedback(message, status) {
+  intelUi.quizFeedback.textContent = message;
+  intelUi.quizFeedback.className = "intel-modal__quiz-feedback";
+  if (status === "error") {
+    intelUi.quizFeedback.classList.add("intel-modal__quiz-feedback--error");
+  } else if (status === "success") {
+    intelUi.quizFeedback.classList.add("intel-modal__quiz-feedback--success");
+  }
+}
+
+function markDiscoveryRetrieved() {
+  if (!activeDiscoveryNode || activeDiscoveryNode.found) return;
+  activeDiscoveryNode.found = true;
+  seenIntelEntries.add(activeDiscoveryNode.name);
+  updateHud();
+}
+
+function renderIntelQuiz(intel, discoveryNode) {
+  intelUi.quizOptions.replaceChildren();
+  setQuizFeedback("", null);
+
+  const alreadyRetrieved = Boolean(discoveryNode?.found);
+  const launchYear = parseLaunchYear(intel?.launchDate);
+
+  if (alreadyRetrieved) {
+    intelUi.quizPrompt.textContent = "Rover retrieval already confirmed.";
+    setQuizFeedback("Rover already retrieved.", "success");
+    return;
+  }
+
+  if (!Number.isInteger(launchYear)) {
+    intelUi.quizPrompt.textContent = "Launch year data is unavailable for this rover.";
+    const fallbackButton = document.createElement("button");
+    fallbackButton.type = "button";
+    fallbackButton.className = "intel-modal__quiz-option";
+    fallbackButton.textContent = "Retrieve Rover";
+    fallbackButton.addEventListener("click", () => {
+      markDiscoveryRetrieved();
+      setQuizFeedback("Success! Rover retrieved.", "success");
+      autoCloseIntelTimer = window.setTimeout(() => {
+        closeIntelModal();
+      }, 650);
+    });
+    intelUi.quizOptions.append(fallbackButton);
+    return;
+  }
+
+  intelUi.quizPrompt.textContent = `What year was ${asText(intel.name)} launched?`;
+  const options = buildQuizOptions(launchYear, intel?.name);
+  for (const optionYear of options) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "intel-modal__quiz-option";
+    button.textContent = String(optionYear);
+    button.addEventListener("click", () => {
+      if (optionYear !== launchYear) {
+        setQuizFeedback("Not quite. Try again!", "error");
+        return;
+      }
+
+      markDiscoveryRetrieved();
+      setQuizFeedback("Correct! Rover retrieved.", "success");
+      autoCloseIntelTimer = window.setTimeout(() => {
+        closeIntelModal();
+      }, 650);
+    });
+    intelUi.quizOptions.append(button);
+  }
 }
 
 function asText(value) {
@@ -997,6 +1114,11 @@ function renderIntelImage(intel) {
 }
 
 function closeIntelModal() {
+  if (autoCloseIntelTimer !== null) {
+    window.clearTimeout(autoCloseIntelTimer);
+    autoCloseIntelTimer = null;
+  }
+  activeDiscoveryNode = null;
   setIntelModalOpen(false);
 }
 

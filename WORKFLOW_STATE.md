@@ -16,6 +16,7 @@
 - New bug report: screen/page moves when using arrow keys for game navigation; fix so gameplay keys do not scroll the page.
 - New change request: revert the last implemented viewport-fit change; then change movement keys to J/K/L/I directions.
 - New change request: integrate `mars-assets.zip` into the project so assets work with the proposed asset-manifest JSON feature.
+- New feature request: add a mini-game inside the rover info modal with one launch-date question; only count rover as retrieved if answered correctly.
 
 ## Clarified Scope
 - Build a Mars-themed rover survival mini-game prototype in HTML + JavaScript.
@@ -86,6 +87,15 @@
   - Yes: extract `mars-assets.zip` into project assets.
   - Yes: create `assets/asset-manifest.json` based on actual extracted filenames.
   - Yes: fully switch rendering to manifest-driven asset loading now.
+- New mini-game direction requested:
+  - In modal, ask one question about rover launch date.
+  - Rover should count as retrieved only after correct answer.
+- Mini-game details confirmed:
+  - Question type: multiple choice.
+  - Correctness rule: year-only answer.
+  - Wrong answers: unlimited retries in the same modal.
+  - Retrieval gating: rover is not counted as retrieved in HUD/objectives until correct answer.
+  - On correct answer: auto-close modal and show success message.
 
 ## Open Questions
 - None blocking.
@@ -131,6 +141,10 @@
 - Extract zip contents under project `assets/` and wire runtime to those extracted files.
 - Manifest must reflect actual extracted filenames/paths.
 - Rendering should be manifest-driven as primary path in this pass.
+- New feature constraint: rover retrieval/progression must depend on correctly answering launch-date question in rover modal.
+- Quiz must be one launch-year question per rover entry (multiple choice).
+- Unlimited retry attempts must be supported without leaving modal.
+- Success flow must auto-close modal and provide success feedback.
 
 ## Plan
 - Build a single-page browser game using HTML5 Canvas + vanilla JavaScript for fastest prototype delivery.
@@ -221,6 +235,14 @@
   - Keep robust fallback handling for missing/failed manifest assets to avoid hard crashes.
   - Update UI/control hint text and other pending approved changes in same implementation pass only if not yet applied.
   - Verify with syntax checks + targeted manifest/file-existence checks.
+- Rover modal quiz-gating plan:
+  - Extend modal markup (`index.html`) with a compact quiz block: question prompt, 3-4 year options, retry/error text, and success feedback hook.
+  - In `game.js`, derive each rover’s correct launch year from existing `launchDate` data and generate deterministic multiple-choice options.
+  - Change rover retrieval flow so discovery node is only marked retrieved after correct answer submission.
+  - Keep unlimited retries in-modal; wrong answers should not close modal and should show clear feedback.
+  - On correct answer: mark rover retrieved, update HUD/objective counters, show success message, and auto-close modal.
+  - Preserve modal pause behavior, close paths, and no-crash fallbacks if quiz data is missing.
+  - Update styles in `style.css` for kid-friendly quiz controls/readability.
 
 ## Debate Notes
 - Planner note: chose Canvas + vanilla JS to minimize setup overhead and keep prototype iteration fast.
@@ -305,8 +327,20 @@
   - Preserve runtime fallback for missing manifest entries/assets (warn + draw fallback primitive/sprite).
   - Validate manifest references by checking file existence for every configured path.
   - Keep keymapping/hint consistency with currently approved controls.
+- Attempted rover-modal-quiz `debater` handoff; blocked by environment model routing error: `Model not found: github-copilot/gpt-5.4`.
+- Fallback planner critique for quiz-gated retrieval:
+  - Derive correct answer from existing rover `launchDate` field to avoid duplicated data drift.
+  - Keep quiz state per-rover and idempotent so already-correct entries cannot double-increment counters.
+  - Ensure wrong answers do not alter retrieval/progression state and remain retryable in-place.
+  - Reuse shared modal close/pause resume path after success auto-close.
+  - Add null-safe behavior if launch date is missing.
 
 ## Files To Change
+- Rover quiz-gating pass (implemented this pass):
+  - `index.html` (added rover modal quiz block: prompt, options container, feedback area)
+  - `style.css` (added quiz section/button/feedback styles)
+  - `game.js` (launch-year quiz generation/validation, retrieval gating, retry flow, success auto-close)
+  - `WORKFLOW_STATE.md` (implementor notes/tests/status + reviewer handoff)
 - Manifest integration pass (implemented this pass):
   - `assets/**` (extracted `mars-assets.zip` nested asset pack + preview files into project assets tree)
   - `assets/asset-manifest.json` (generated from actual extracted/current asset file paths with render mappings)
@@ -373,6 +407,11 @@
   - `assets/asset-manifest.json` (new manifest generated from extracted filenames)
   - `game.js` (manifest-driven asset loading/rendering integration)
   - `WORKFLOW_STATE.md` (planning/debate/handoff updates)
+- Rover quiz-gating pass (planned):
+  - `index.html` (modal quiz UI elements)
+  - `style.css` (quiz section styling and feedback states)
+  - `game.js` (quiz logic, launch-year validation, retrieval gating, success auto-close)
+  - `WORKFLOW_STATE.md` (planning/debate/handoff updates)
 - Revert + remap pass (implemented this pass):
   - `style.css` (reverted only the viewport-fit containment additions from the most recent patch)
   - `game.js` (movement mapping changed to J/K/L/I only; arrow movement bindings removed)
@@ -382,6 +421,15 @@
   - `opencode.json` (`agent.debater.model` set to `github-copilot/gpt-5.6-luna`)
 
 ## Current Status
+- Rover modal quiz-gating implementation complete:
+  - Added one launch-year multiple-choice question inside rover intel modal.
+  - Discovery nodes are now marked retrieved only after correct quiz answer (HUD/objectives gated accordingly).
+  - Wrong answers stay in the same modal with unlimited retries and feedback.
+  - Correct answer shows success feedback and auto-closes modal via existing close path.
+  - Added null-safe launch-date handling: if launch year cannot be parsed, modal offers a safe fallback retrieval action (no crash).
+  - Existing controls and gameplay loop unchanged except approved retrieval gating behavior.
+  - Existing modal field rendering, attribution links, and pause/resume semantics preserved.
+  - Ready for reviewer validation.
 - Manifest integration implementation complete:
   - Extracted `mars-assets.zip` into `assets/` using shell-based unzip logic, including nested `mars_assets.zip` content and preview images.
   - Created `assets/asset-manifest.json` from actual on-disk `assets/**` files (no assumed paths).
@@ -433,6 +481,17 @@
   - Generate manifest from actual extracted files.
   - Fully switch to manifest-driven rendering.
 - Phase 3 plan updated and ready for debater review.
+- Phase 1 (Clarify) reopened for rover-modal quiz feature request.
+- Clarifying questions drafted for quiz answer format, validation rules, retry behavior, and retrieval/HUD progression semantics.
+- Phase 2 complete for rover-modal quiz feature:
+  - Multiple-choice launch-year question.
+  - Year-only validation.
+  - Unlimited retries in modal.
+  - Rover counted retrieved only after correct answer.
+  - Correct answer auto-closes modal with success message.
+- Phase 3 plan updated and ready for debater review.
+- Debater handoff attempted for rover-modal quiz feature but blocked by model routing error.
+- Plan accepted with fallback critique; ready for implementor handoff.
 - Debater handoff attempted for `mars-assets.zip` integration plan but blocked by model routing error.
 - Plan accepted with fallback critique; ready for implementor handoff.
 - Astronaut sprite visual pass implemented (player/enemy/projectile):
@@ -550,11 +609,40 @@
 - `assets/asset-manifest.json` exists and matches real extracted file paths.
 - Rendering path is manifest-driven for configured visual assets.
 - Missing/failed asset paths are handled gracefully (no runtime crash).
+- Rover modal includes one multiple-choice launch-year question.
+- Only a correct launch-year answer marks that rover as retrieved.
+- Wrong answers allow unlimited retries in the same modal.
+- HUD/objective rover counts do not increase until the quiz answer is correct.
+- Correct answer shows success message and auto-closes modal.
 
 ## Next Agent
-- `reviewer` — review manifest integration (zip extraction + generated manifest + manifest-driven render switch + fallback safety + no gameplay/control/modal regressions).
+- `reviewer` — review rover modal quiz-gating implementation (retrieval only after correct answer, unlimited retry behavior, success auto-close path, null-safe launch year handling, and no control/gameplay regressions beyond approved gating).
 
 ## Implementation Notes
+- Implemented approved rover quiz-gating with minimal scope:
+  - `index.html`: inserted `intel-modal__quiz` section with:
+    - `#intelQuizPrompt`
+    - `#intelQuizOptions`
+    - `#intelQuizFeedback`
+  - `style.css`: added quiz-specific styles for section container, option buttons, and success/error feedback states.
+  - `game.js` logic changes:
+    - Retrieval gating:
+      - `handleInteraction()` no longer immediately sets `d.found = true` for rover discoveries.
+      - Discovery is now committed only in `markDiscoveryRetrieved()` after correct quiz answer.
+    - Modal/quiz flow:
+      - `openIntelModal(name, discoveryNode)` now receives the active discovery node.
+      - Added `parseLaunchYear()` to derive year from existing `launchDate` string using safe regex parsing.
+      - Added deterministic `buildQuizOptions()` (correct year + plausible wrong years).
+      - Added `renderIntelQuiz()` for per-rover question rendering and answer handling.
+      - Wrong answer path only updates feedback (`Not quite. Try again!`) and keeps modal open.
+      - Correct answer path marks retrieval, updates HUD, shows success text, then auto-closes modal via timeout calling existing `closeIntelModal()`.
+    - Safety/idempotence:
+      - Added `activeDiscoveryNode` and `markDiscoveryRetrieved()` guard (`if already found, return`) to prevent double counting.
+      - Added timeout cleanup in `closeIntelModal()` to avoid stale auto-close timers.
+      - If launch year is unavailable/unparseable, quiz renders a safe fallback retrieval button to preserve robust no-crash behavior.
+- Context/API verification note:
+  - Context7 MCP is not available in this environment, so direct Context7 verification could not be executed.
+  - No third-party framework/library API changes were introduced; implementation uses existing browser DOM/Canvas/Fetch primitives already used in the codebase.
 - Implemented approved manifest integration with minimal gameplay-risk scope:
   - Extracted archive contents via shell/python zip tooling:
     - outer zip: `mars-assets.zip` includes `mars_assets.zip` + preview files.
@@ -776,6 +864,15 @@
 - Reviewer output still pending due to environment model routing issue.
 
 ## Test Results
+- Rover quiz-gating verification (this pass):
+  - `node --check "game.js"` ✅
+  - `node -e "const fs=require('node:fs'); JSON.parse(fs.readFileSync('data/rovers.json','utf8')); console.log('rovers.json ok');"` ✅
+  - `rg -n "intelQuizPrompt|intelQuizOptions|intelQuizFeedback|intel-modal__quiz" "index.html" "style.css"` ✅
+    - Confirmed quiz UI hooks and style selectors are present.
+  - `rg -n "parseLaunchYear|buildQuizOptions|renderIntelQuiz|markDiscoveryRetrieved|activeDiscoveryNode|d\.found = true;" "game.js"` ✅
+    - Confirmed retrieval commit moved into gated path and quiz logic wiring exists.
+  - `rg -n "if \(!d\.found && distance\(player\.x, player\.y, d\.x, d\.y\) <= CONFIG\.interactionRange\)" "game.js"` ✅
+    - Confirmed discovery interaction now enters modal flow without immediate retrieval state mutation.
 - Manifest integration verification (this pass):
   - `node --check "game.js"` ✅
   - `node -e "const fs=require('node:fs'); JSON.parse(fs.readFileSync('assets/asset-manifest.json','utf8')); console.log('asset-manifest.json ok');"` ✅
@@ -835,7 +932,7 @@
   - `rg -n "100dvh|overscroll-behavior|html,|overflow: hidden;|height: 100%|height: 100vh;" style.css` ✅
     - No viewport-fit containment signatures remain from the reverted patch; only pre-existing style usage remains (`min-height: 100vh`, `.canvas-wrap { overflow: hidden; }`).
 
-Handoff note: @reviewer please review the manifest integration pass for (1) correct extraction of `mars-assets.zip` into `assets/`, (2) correctness of `assets/asset-manifest.json` against real files, (3) manifest-driven rendering now used as primary path in `game.js`, and (4) preserved fallback safety + no regressions to gameplay logic, approved controls (`J/K/L/I`, mouse, `E`, `R`), or rover intel modal behavior/content semantics.
+Handoff note: @reviewer please review the rover modal quiz-gating pass for (1) modal multiple-choice launch-year UI wiring, (2) retrieval/HUD progression only occurring after correct answer, (3) wrong-answer unlimited retry behavior in the same modal, (4) success feedback + auto-close using existing modal close path, and (5) null-safe handling when launch year is unavailable, while ensuring no regressions to approved controls (`J/K/L/I`, mouse aim/fire, `E`, `R`) or existing modal content/attribution/pause-resume semantics.
 
 ## Security Findings
 -
