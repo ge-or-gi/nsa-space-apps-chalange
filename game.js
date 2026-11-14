@@ -45,6 +45,16 @@ const RENDER_THEME = {
   },
 };
 
+const HUD_THEME = {
+  panel: "rgba(14, 24, 56, 0.86)",
+  panelBorder: "rgba(126, 240, 255, 0.68)",
+  panelShadow: "rgba(5, 10, 30, 0.5)",
+  title: "#a8e7ff",
+  value: "#fff6d4",
+  objectiveTitle: "#7ef0ff",
+  objectiveText: "#f4fbff",
+};
+
 const DEFAULT_RENDER_MANIFEST = {
   terrain: {
     sky: "assets/backgrounds/sky/sky_gradient_day.png",
@@ -65,14 +75,6 @@ const DEFAULT_RENDER_MANIFEST = {
 
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
-
-const hud = {
-  health: document.getElementById("health"),
-  wave: document.getElementById("wave"),
-  discoveries: document.getElementById("discoveries"),
-  parts: document.getElementById("parts"),
-  objective: document.getElementById("objective"),
-};
 
 const intelUi = {
   root: document.getElementById("intelModal"),
@@ -126,6 +128,13 @@ let activeDiscoveryNode = null;
 let autoCloseIntelTimer = null;
 let renderManifest = { ...DEFAULT_RENDER_MANIFEST };
 let renderAssets = createRenderAssets(renderManifest);
+let hudSnapshot = {
+  health: "100",
+  wave: "1",
+  discoveries: "0/0",
+  parts: "0/0",
+  objective: "Survive and gather intel.",
+};
 
 function createSpriteAsset(src) {
   const image = new Image();
@@ -316,37 +325,35 @@ function updateHud() {
   const discoveriesFound = discoveries.filter((d) => d.found).length;
   const partsCollected = parts.filter((p) => p.collected).length;
 
-  hud.health.textContent = `Health: ${Math.max(0, Math.round(player.health))}`;
-  hud.wave.textContent = `Wave: ${wave}`;
-  hud.discoveries.textContent = `Rovers Found: ${discoveriesFound}/${discoveries.length}`;
-  hud.parts.textContent = `Rocket Parts: ${partsCollected}/${parts.length}`;
+  hudSnapshot.health = String(Math.max(0, Math.round(player.health)));
+  hudSnapshot.wave = String(wave);
+  hudSnapshot.discoveries = `${discoveriesFound}/${discoveries.length}`;
+  hudSnapshot.parts = `${partsCollected}/${parts.length}`;
+  hudSnapshot.objective = getObjectiveText();
+}
 
+function getObjectiveText() {
   if (state === GAME_STATE.GAME_OVER) {
-    hud.objective.textContent = "Objective: Mission failed. Press R to restart.";
-    return;
+    return "Mission failed. Press R to restart.";
   }
 
   if (state === GAME_STATE.VICTORY) {
-    hud.objective.textContent = "Objective: Rocket launched. You are returning home! Press R to play again.";
-    return;
+    return "Rocket launched. You are returning home! Press R to play again.";
   }
 
   if (!allDiscoveriesFound()) {
-    hud.objective.textContent = "Objective: Find all NASA rovers/robots (press E near a beacon).";
-    return;
+    return "Find all NASA rovers/robots (press E near a beacon).";
   }
 
   if (!allPartsCollected()) {
-    hud.objective.textContent = "Objective: Collect all rocket parts (press E near a part).";
-    return;
+    return "Collect all rocket parts (press E near a part).";
   }
 
   if (!rocketZone.assembled) {
-    hud.objective.textContent = "Objective: Reach the launch zone and press E to assemble your rocket.";
-    return;
+    return "Reach the launch zone and press E to assemble your rocket.";
   }
 
-  hud.objective.textContent = "Objective: Launch sequence active. Hold out until liftoff!";
+  return "Launch sequence active. Hold out until liftoff!";
 }
 
 function allDiscoveriesFound() {
@@ -551,8 +558,134 @@ function draw() {
   drawEnemies();
   drawBullets();
   drawPlayer();
+  drawHudOverlay();
   drawInteractionPrompt();
   drawStateOverlay();
+}
+
+function drawHudOverlay() {
+  const margin = Math.max(14, Math.round(canvas.width * 0.016));
+  const cardWidth = Math.min(220, Math.max(140, Math.round(canvas.width * 0.18)));
+  const cardHeight = 62;
+  const cardGap = 10;
+  const objectiveWidth = Math.min(430, Math.max(260, Math.round(canvas.width * 0.44)));
+  const objectiveHeight = Math.min(138, Math.max(102, Math.round(canvas.height * 0.2)));
+  const rightX = canvas.width - margin - cardWidth;
+  const objectiveY = canvas.height - margin - objectiveHeight;
+
+  ctx.save();
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+
+  drawHudCard(margin, margin, cardWidth, cardHeight, "HEALTH", hudSnapshot.health);
+  drawHudCard(margin, margin + cardHeight + cardGap, cardWidth, cardHeight, "WAVE", hudSnapshot.wave);
+
+  drawHudCard(rightX, margin, cardWidth, cardHeight, "ROVERS FOUND", hudSnapshot.discoveries);
+  drawHudCard(rightX, margin + cardHeight + cardGap, cardWidth, cardHeight, "ROCKET PARTS", hudSnapshot.parts);
+
+  drawObjectivePanel(margin, objectiveY, objectiveWidth, objectiveHeight, hudSnapshot.objective);
+  ctx.restore();
+}
+
+function drawHudCard(x, y, width, height, label, value) {
+  drawHudPanel(x, y, width, height);
+  ctx.fillStyle = HUD_THEME.title;
+  ctx.font = "800 12px Inter, Arial";
+  ctx.fillText(label, x + 14, y + 21);
+
+  ctx.fillStyle = HUD_THEME.value;
+  ctx.font = "800 28px 'Baloo 2', Arial";
+  ctx.fillText(value, x + 14, y + 50);
+}
+
+function drawObjectivePanel(x, y, width, height, objectiveText) {
+  drawHudPanel(x, y, width, height);
+  ctx.fillStyle = HUD_THEME.objectiveTitle;
+  ctx.font = "800 12px Inter, Arial";
+  ctx.fillText("OBJECTIVE", x + 14, y + 21);
+
+  ctx.fillStyle = HUD_THEME.objectiveText;
+  ctx.font = "700 16px Inter, Arial";
+  drawClampedText(objectiveText, x + 14, y + 44, width - 28, 20, 4);
+}
+
+function drawHudPanel(x, y, width, height) {
+  ctx.save();
+  ctx.shadowColor = HUD_THEME.panelShadow;
+  ctx.shadowBlur = 14;
+  ctx.shadowOffsetY = 5;
+  roundRectPath(x, y, width, height, 14);
+  ctx.fillStyle = HUD_THEME.panel;
+  ctx.fill();
+  ctx.restore();
+
+  roundRectPath(x, y, width, height, 14);
+  ctx.strokeStyle = HUD_THEME.panelBorder;
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+}
+
+function roundRectPath(x, y, width, height, radius) {
+  const r = Math.min(radius, width * 0.5, height * 0.5);
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + width, y, x + width, y + height, r);
+  ctx.arcTo(x + width, y + height, x, y + height, r);
+  ctx.arcTo(x, y + height, x, y, r);
+  ctx.arcTo(x, y, x + width, y, r);
+  ctx.closePath();
+}
+
+function drawClampedText(text, x, y, maxWidth, lineHeight, maxLines) {
+  const value = typeof text === "string" ? text.trim() : "";
+  const rawWords = (value || "").split(/\s+/).filter(Boolean);
+  const words = rawWords.length ? rawWords : ["Objective unavailable."];
+  const lines = [];
+  let current = "";
+
+  for (const word of words) {
+    const trial = current ? `${current} ${word}` : word;
+    if (ctx.measureText(trial).width <= maxWidth) {
+      current = trial;
+      continue;
+    }
+
+    if (current) {
+      lines.push(current);
+      current = word;
+    } else {
+      lines.push(trimTextToWidth(word, maxWidth));
+      current = "";
+    }
+
+    if (lines.length === maxLines) break;
+  }
+
+  if (lines.length < maxLines && current) {
+    lines.push(current);
+  }
+
+  if (lines.length > maxLines) {
+    lines.length = maxLines;
+  }
+
+  if (lines.length === maxLines) {
+    const consumed = lines.join(" ").split(/\s+/).filter(Boolean).length;
+    if (consumed < words.length) {
+      lines[maxLines - 1] = trimTextToWidth(`${lines[maxLines - 1]}…`, maxWidth);
+    }
+  }
+
+  for (let i = 0; i < lines.length; i += 1) {
+    ctx.fillText(lines[i], x, y + i * lineHeight);
+  }
+}
+
+function trimTextToWidth(text, maxWidth) {
+  let clipped = text;
+  while (clipped && ctx.measureText(clipped).width > maxWidth) {
+    clipped = clipped.slice(0, -1);
+  }
+  return clipped;
 }
 
 function drawTerrain() {

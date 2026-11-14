@@ -18,6 +18,8 @@
 - New change request: integrate `mars-assets.zip` into the project so assets work with the proposed asset-manifest JSON feature.
 - New feature request: add a mini-game inside the rover info modal with one launch-date question; only count rover as retrieved if answered correctly.
 - New change request: add a YouTube video for Sojourner intel (`https://www.youtube.com/watch?v=9HGRReKUzfU&t=26s`) as a second media item, with the same capability to be added for every rover as user provides links.
+- New bug-fix request: after local revert via `git checkout .`, remove `imageFallback` from rover intel modal because it is visibly showing.
+- New change request: move the game HUD into the canvas and make it more modern.
 
 ## Clarified Scope
 - Build a Mars-themed rover survival mini-game prototype in HTML + JavaScript.
@@ -103,6 +105,15 @@
   - Add per-rover `videoUrl` in `data/rovers.json` for future rover links.
   - Do not use timestamp start offset from provided URL (start from beginning).
   - Same implementation pattern should support adding videos for all rovers as links are provided.
+- Latest user clarifications for image-fallback bug fix after local revert:
+  - Remove image fallback completely from rover intel modal.
+  - Scope this pass to the fallback issue only.
+- Latest user clarifications for HUD-in-canvas modernization request:
+  - Move all HUD items into canvas (health, wave, rover count, rocket parts, objective text).
+  - Remove existing HTML HUD from layout.
+  - Use playful NASA (kid-friendly) modern style direction.
+  - Include modal visual modernization in the same pass.
+  - HUD placement preference: corner cards + objective panel.
 
 ## Open Questions
 - None blocking.
@@ -157,6 +168,16 @@
 - Modal media layout should be stacked with image first and video second.
 - Rover intel data model should include `videoUrl` field per rover for future additions.
 - Ignore provided YouTube time offsets; embedded playback should start from beginning.
+- Latest request applies after a local full revert (`git checkout .`), so implementation must be based on current checked-out files.
+- Remove image fallback UI/logic completely in this pass.
+- Limit this pass to the image-fallback issue only.
+- New request introduces HUD architecture/UI change and needs scope confirmation before planning implementation.
+- All HUD information must render inside canvas (no external HUD panels in layout).
+- Existing HTML HUD should be removed from visible layout in this pass.
+- Visual direction for HUD + modal is playful NASA / kid-friendly.
+- This pass includes modal visual modernization in addition to HUD migration.
+- Preferred in-canvas layout: corner cards + objective panel.
+- Superseded: prior “limit to image-fallback-only” constraint is replaced by this new HUD+modal modernization request.
 
 ## Plan
 - Build a single-page browser game using HTML5 Canvas + vanilla JavaScript for fastest prototype delivery.
@@ -267,8 +288,70 @@
     - clear/remove iframe source on modal close to stop background playback and stale state.
   - Preserve current modal pause/resume behavior and quiz/retrieval gating logic.
   - Keep implementation data-driven so future rover video links only require JSON updates.
+- Image-fallback removal plan (post-revert, scoped fix):
+  - Remove fallback panel markup (`imageFallback`) from rover intel modal in `index.html`.
+  - Remove fallback-specific styles in `style.css` that render fallback text container.
+  - Update `game.js` intel image render path to remove `imageFallback` references/branches and avoid touching removed DOM hooks.
+  - Keep modal image rendering functional for valid images; for missing/failed image, hide/clear image with no replacement panel/text.
+  - Reset image handlers/state (`onload`/`onerror`/`src`) between rover entries to avoid stale image carryover.
+  - Preserve modal open/close/pause behavior and all quiz/retrieval logic.
+  - Validate with syntax + targeted modal render checks and confirm no remaining `imageFallback` references in repo.
+- HUD-in-canvas + modal modernization plan (new approved scope):
+  - Move HUD drawing into canvas in `game.js`:
+    - render health/wave as top-left metric cards,
+    - render rover/rocket progress as top-right metric cards,
+    - render objective/status in a dedicated corner objective panel.
+  - Remove external HTML HUD block from `index.html` while preserving canvas, controls hint, and modal structure.
+  - Update `game.js` HUD update path so DOM HUD dependencies are removed or made no-op without affecting gameplay state.
+  - Modernize in-canvas HUD visuals (playful NASA kid-friendly): rounded cards, high-contrast labels/values, subtle glow/shadow, readable typography.
+  - Modernize modal visuals in `style.css` (cards/chips/spacing/contrast polish) without changing modal data fields, close behavior, quiz gating, or pause semantics.
+  - Keep controls and gameplay mechanics unchanged.
+  - Validate with syntax checks + targeted code-path checks for pause/resume, quiz gating, and HUD data correctness.
 
 ## Debate Notes
+- HUD-in-canvas modernization review:
+  - Verdict: revise before implementation; the direction is correct, but the plan needs a tighter migration and regression boundary.
+  - The proposed three-file scope is appropriate and minimal (`game.js`, `index.html`, `style.css`); no new dependency, asset, or gameplay-state refactor is needed.
+  - Before deleting the HTML HUD, inventory every HUD DOM reference/update (including health, wave, rover count, parts, objective, and any interaction/status prompt). Remove only gameplay HUD markup and bindings; retain the canvas, modal DOM, and unchanged controls hint unless it is explicitly part of the HUD.
+  - Draw the HUD in a dedicated final canvas pass after world/entity rendering and before any transient overlay. Do not let camera/world transforms affect it. Use the existing canvas resize/device-pixel-ratio path so cards remain positioned and text remains legible at the supported desktop sizes.
+  - Keep HUD text derived from existing state (`player.health`, `wave`, discovery/part arrays, `rocketZone`, game state); do not create a second progress/state model. Preserve exact objective wording/transition semantics, including game-over, victory, launch, and interaction feedback.
+  - Use bounded card dimensions, padding, and text wrapping/truncation so long objective messages cannot overflow the canvas. Ensure the overlay does not intercept keyboard/mouse input and does not alter collision or world coordinates.
+  - Modal modernization must remain CSS/presentation-only. Preserve modal DOM hooks, image/video cleanup, quiz retry/correct-answer gating, all close paths, and `intelOpen` pause/resume behavior.
+  - Existing plan/criteria contain stale references to WASD/arrows and remote modal images. The current approved behavior is J/K/L/I movement and local rover JPEGs; implementation must not regress either.
+  - Context7 was unavailable in this environment. No external library/API behavior is introduced; canvas 2D text/shape rendering uses existing browser APIs and should be validated with runtime/manual checks.
+
+## Verdict
+- revise before implementation
+
+## Problems in Current Plan
+- It says to remove DOM HUD dependencies but does not require a complete reference inventory, leaving stale `getElementById` bindings and update calls likely to cause runtime errors.
+- It does not specify a dedicated screen-space render order or resize/DPR handling; HUD cards can be transformed by the camera or become misaligned/unreadable.
+- It does not define handling for long objective/status strings or interaction prompts, so the “all HUD” boundary and canvas overflow behavior are ambiguous.
+- Validation is too broad: it needs explicit checks that all five requested data groups render correctly across state transitions and that modal/quiz pause behavior is unchanged.
+- Older plan/acceptance text still mentions WASD/arrows and remote image URLs, which can mislead implementation and regression review.
+
+## Better Plan
+- Keep the planned files only: `game.js`, `index.html`, `style.css`, plus `WORKFLOW_STATE.md`; do not alter data, assets, controls, or simulation logic.
+- In `game.js`, replace the current DOM HUD update path with one `drawHudOverlay()` called from the final render stage. Render top-left health/wave cards, top-right rover/parts cards, and a bounded objective panel from existing state; include any existing visible gameplay status prompt only if it is classified as HUD, while leaving the controls hint and modal DOM intact.
+- Make the overlay screen-space and resize-safe: save/restore context, reset transforms before drawing, use canvas CSS/backing dimensions consistently, and wrap or clamp objective text within the panel.
+- In `index.html`, remove only the external gameplay HUD markup and its associated IDs/classes; retain canvas, modal/quiz/media hooks, and unchanged controls text.
+- In `style.css`, remove obsolete external HUD layout rules and modernize modal styling only; retain modal scrolling, contrast, focus/close affordances, and video/image hidden states.
+- Validate with `node --check game.js`, static search for removed HUD IDs/references, JSON unchanged checks, and a focused browser run: initial HUD, damage, wave change, rover/part progress, each objective/game-over/victory state, resize, modal open/close/backdrop/keyboard, wrong/correct quiz retries, and pause/resume.
+
+## Recommendation
+- Revise the plan with the explicit HUD reference inventory, screen-space resize-safe render pass, stale-control/image wording cleanup, and state-transition regression checks before handing it to the implementor.
+
+- Context/API verification for in-canvas HUD rendering:
+  - Verified via MDN that `CanvasRenderingContext2D.fillText()` is appropriate for drawing HUD text directly onto canvas and does not modify the current path state.
+  - This supports an overlay HUD draw pass without impacting existing shape/path rendering flow.
+  - Context7 MCP is unavailable in this environment; MDN used as authoritative fallback.
+- Image-fallback removal review (latest, post-revert):
+  - Verdict: approved with minor hardening.
+  - Keep scope minimal: `index.html`, `style.css`, `game.js` only.
+  - Remove fallback comprehensively (markup + CSS + JS branches), not just hide.
+  - Missing/failed image behavior should be image hidden/cleared only (no fallback text panel).
+  - Reset image state between entries to avoid stale visuals.
+  - Validation should include syntax check + repo search ensuring no `imageFallback` references remain.
 - Planner note: chose Canvas + vanilla JS to minimize setup overhead and keep prototype iteration fast.
 - Attempted `debater` handoff twice, but blocked by environment error: `Model not found: github-copilot/gpt-5.4`.
 - Planner fallback critique added:
@@ -370,13 +453,37 @@
   - Parse only supported YouTube host/path formats, extract the 11-character video ID, and return no iframe for malformed/untrusted URLs. On render failure/absence, hide the video panel cleanly. On `closeIntelModal()`, remove/reset the iframe before resuming/clearing modal state.
   - Preserve the existing shared open/close path, pause flag, quiz generation/retrieval gating, and image rendering. Avoid autoplay and API-script dependencies; YouTube’s standard iframe embed is sufficient.
   - Validate with `node --check game.js`, JSON parse/schema checks for all six `videoUrl` fields, and a focused browser/manual test: Sojourner is image then video at 0:00, each other rover has no empty media panel, invalid URL is inert, close stops playback, and wrong/correct quiz behavior remains unchanged.
-  - API behavior verified against YouTube’s official IFrame player parameters documentation: the canonical form is `https://www.youtube.com/embed/VIDEO_ID`; `start` controls an offset, so omitting it starts at the beginning; autoplay defaults to `0`; embeds require at least a 200×200 viewport (16:9 sizing should be large enough for the modal). `modestbranding` is deprecated/has no effect, and `rel=0` only limits related videos to the same channel rather than disabling them.
+- API behavior verified against YouTube’s official IFrame player parameters documentation: the canonical form is `https://www.youtube.com/embed/VIDEO_ID`; `start` controls an offset, so omitting it starts at the beginning; autoplay defaults to `0`; embeds require at least a 200×200 viewport (16:9 sizing should be large enough for the modal). `modestbranding` is deprecated/has no effect, and `rel=0` only limits related videos to the same channel rather than disabling them.
+- Image-fallback removal review: approve the three-file scope (`index.html`, `style.css`, `game.js`) as the simplest correct approach; no data, video, quiz, or gameplay changes are needed.
+- Required adjustment: “remove fallback completely” must include the fallback DOM node, its CSS, the `imageFallback` reference, and every fallback text/toggle branch. The remaining image path should hide/remove `intelImage` when `imageUrl` is absent or fails, rather than displaying replacement UI.
+- Required edge-case handling: clear/reset image `onload`/`onerror` handlers and remove the prior `src` when no URL is available, so a failed or previous rover image cannot remain visible while another modal entry is rendered. Preserve the existing image element and valid-image rendering.
+- Validation should include `node --check game.js`, a repository search proving no `imageFallback` references remain, and a focused browser check for valid image display, missing/failed image with no fallback panel/text, modal close/backdrop/keyboard behavior, pause/resume, and quiz retries/correct-answer retrieval.
 - Exact plan adjustments before implementation:
   - Plan: add uniform nullable/empty `videoUrl` values for all six records; implement allowlisted YouTube ID parsing, no timestamp parameter, iframe teardown on close, and focused media/modal regression validation.
   - Files To Change: retain `data/rovers.json`, `index.html`, `style.css`, and `game.js`; add no new dependency or YouTube API script. Update the planned `game.js` work to include video DOM cleanup and safe parser tests/checks.
   - Acceptance Criteria: require the canonical beginning-of-video embed, no iframe for missing/invalid URLs, playback stops when modal closes, and explicit verification that image-first stacking, pause/resume, close paths, and quiz gating remain unchanged.
 
 ## Files To Change
+- HUD-in-canvas + modal modernization pass (implemented this pass):
+  - `game.js` (kept HUD fully canvas-rendered in dedicated screen-space pass; removed DOM HUD dependency path remains neutralized; bounded objective wrapping/clamping retained)
+  - `index.html` (external gameplay HUD markup removed from visible layout; canvas/controls/modal hooks preserved)
+  - `style.css` (removed obsolete external HUD selectors/rules; modal visual modernization preserved)
+  - `WORKFLOW_STATE.md` (implementor status/notes/tests/next-agent updates)
+- HUD-in-canvas + modal modernization pass (planned):
+  - `game.js` (in-canvas HUD renderer, remove DOM HUD reliance, modern HUD visual tokens)
+  - `index.html` (remove visible external HUD block; keep canvas/controls/modal hooks)
+  - `style.css` (modal modernization and shell layout adjustments after HUD removal)
+  - `WORKFLOW_STATE.md` (planning/debate/handoff updates)
+- Image-fallback removal pass (planned):
+  - `index.html` (remove image fallback element from intel modal media area)
+  - `style.css` (remove image-fallback panel styles)
+  - `game.js` (remove fallback DOM references/toggles in intel image rendering)
+  - `WORKFLOW_STATE.md` (planning/debate/handoff updates)
+- Image-fallback removal pass (implemented this pass):
+  - `index.html` (removed `#intelImageFallback` fallback node from rover intel modal media markup)
+  - `style.css` (removed `.intel-modal__image-fallback` styles)
+  - `game.js` (removed `imageFallback` DOM binding and all fallback branches; image now clears/hides on missing/failed URLs)
+  - `WORKFLOW_STATE.md` (implementor status/notes/tests/next-agent handoff updates)
 - Rover intel video-media pass (planned):
   - `data/rovers.json` (add `videoUrl` field, set Sojourner video link)
   - `index.html` (add second stacked embedded-video media block in intel modal)
@@ -474,6 +581,35 @@
   - `opencode.json` (`agent.debater.model` set to `github-copilot/gpt-5.6-luna`)
 
 ## Current Status
+- HUD-in-canvas + modal modernization implementation complete (this pass):
+  - All gameplay HUD fields (health, wave, rover progress, rocket-part progress, objective/status) render inside canvas via `drawHudOverlay()`.
+  - HUD pass is camera-independent (`ctx.save()` + `ctx.setTransform(1,0,0,1,0,0)` + `ctx.restore()`) and drawn after world/entities.
+  - Objective panel text is bounded/wrapped/clamped to avoid overflow.
+  - External HTML HUD markup is removed from visible layout.
+  - Obsolete HUD CSS selectors were removed.
+  - Modal visuals remain modernized; modal behavior/hooks and quiz/video/pause semantics preserved.
+  - Ready for reviewer validation.
+- Debate complete for the latest HUD-in-canvas request: revise the plan before implementation; the minimal file scope is approved, with the migration and validation adjustments recorded above.
+- Exact implementation boundary: `game.js`, `index.html`, and `style.css` only (plus workflow notes); preserve J/K/L/I, mouse aim/fire, `E`, `R`, local rover images, modal/quiz/video behavior, and simulation state.
+- Phase 2 complete for HUD-in-canvas modernization request:
+  - User confirmed all HUD items should move into canvas.
+  - User confirmed existing external HTML HUD should be removed from layout.
+  - User selected playful NASA/kid-friendly style direction.
+  - User requested modal modernization in the same pass.
+  - User selected corner cards + objective panel HUD layout.
+- Phase 3 plan updated for HUD-in-canvas + modal modernization and ready for debater review.
+- Image-fallback removal implementation complete (scoped fix only):
+  - Removed image fallback panel from modal markup/styles/JS code paths.
+  - `renderIntelImage()` now resets image state per entry (`onload`, `onerror`, `src`, `hidden`) to prevent stale carryover.
+  - Valid image URLs still display normally; missing/failed URLs now leave image hidden/cleared with no fallback text panel.
+  - Preserved modal open/close/pause behavior and existing quiz/retrieval flow.
+  - Ready for reviewer validation.
+- Image-fallback removal debate complete: current plan is approved with the image-rendering cleanup and validation adjustments recorded above. Implementation must remain limited to `index.html`, `style.css`, and `game.js` (plus this workflow note).
+- Phase 1 (Clarify) reopened for new bug-fix request after local revert: `imageFallback` is visible in rover modal and needs removal/visibility correction.
+- Phase 2 complete for image-fallback request:
+  - User confirmed full removal (`remove completely`) and scope limited to this issue.
+- Phase 3 complete for scoped image-fallback removal; debater review accepted and hardening notes applied.
+- Ready for implementor handoff.
 - Rover intel video-media implementation complete (this pass):
   - Added `videoUrl` uniformly across all six rover entries in `data/rovers.json`.
   - Sojourner now uses the user-provided URL; other rover `videoUrl` values are empty placeholders.
@@ -680,11 +816,57 @@
 - Modal renders video iframe only when valid `videoUrl` exists and otherwise remains stable with no UI/runtime errors.
 - YouTube links are converted to embed URLs and do not enforce provided timestamp offsets.
 - Existing modal behavior (pause/resume, close paths, quiz gating, rover details, attribution links) remains unchanged.
+- `imageFallback` is removed from modal markup/styles/logic and is not shown in rover intel modal.
+- For missing/failed rover image loads, modal shows no fallback text panel; image area is simply cleared/hidden.
+- No remaining `imageFallback` references exist in active code paths.
+- HUD is rendered inside canvas for health, wave, rover count, rocket-part progress, and objective/status text.
+- External HTML HUD panel is removed from visible layout.
+- In-canvas HUD follows playful NASA/kid-friendly modern styling using corner cards and an objective panel.
+- Modal visuals are modernized in this same pass without changing modal data fields or behavior semantics.
+- Gameplay mechanics, controls, pause/resume logic, and quiz/retrieval gating remain unchanged.
 
 ## Next Agent
-- Reviewer: validate rover intel video-media pass (safe parser allowlist, canonical embed URL behavior without timestamp offset, conditional iframe rendering, iframe teardown on close, and no regressions to pause/resume + quiz gating). @reviewer please review the result.
+- `reviewer` — review the completed HUD-in-canvas + modal modernization implementation:
+  - verify HUD remains fully in-canvas and camera-independent,
+  - confirm external HUD markup/CSS references are removed,
+  - confirm objective panel wrapping/clamping and bounded layout,
+  - confirm modal close/backdrop/keyboard + pause/resume + quiz gating behavior are unchanged.
 
 ## Implementation Notes
+- Implemented approved HUD-in-canvas + modal modernization scope with minimal changes:
+  - `game.js`
+    - Preserved/used dedicated screen-space HUD pass (`drawHudOverlay`) called in final render flow after world entities.
+    - HUD data remains sourced from existing gameplay state via `updateHud()` / `getObjectiveText()` only.
+    - Confirmed transform isolation for HUD (`save`/`setTransform`/`restore`) and bounded objective text wrapping/clamping (`drawClampedText`).
+    - No control/simulation/progression logic changes.
+  - `index.html`
+    - External gameplay HUD block remains removed; canvas, controls hint, and modal/quiz/media hooks are intact.
+  - `style.css`
+    - Removed obsolete external HUD rules (`.hud*`, `#objective` legacy selector) now that HUD is canvas-only.
+    - Kept modernized modal card/chip/readability styling and existing behavior hooks.
+- Context/API verification note for this pass:
+  - Context7 MCP is unavailable in this environment, so direct Context7 lookup could not be executed.
+  - No new third-party library/framework APIs were introduced; changes rely on existing Canvas 2D and DOM behavior already used in-project.
+- Implemented approved image-fallback removal with minimal scoped edits:
+  - `index.html`
+    - Removed `#intelImageFallback` from intel modal media markup.
+  - `style.css`
+    - Removed `.intel-modal__image-fallback` rule block.
+  - `game.js`
+    - Removed `intelUi.imageFallback` DOM reference.
+    - Removed all fallback-toggle/text branches in `renderIntelImage()`.
+    - Added explicit per-entry image reset before rendering:
+      - clear handlers (`onload = null`, `onerror = null`),
+      - hide image (`hidden = true`),
+      - clear previous source (`removeAttribute("src")`).
+    - Missing `imageUrl`: returns with image hidden/cleared.
+    - Failed load (`onerror`): keeps image hidden/cleared and removes handlers/src.
+    - Successful load (`onload`): unhides image for valid URLs.
+  - Scope guard:
+    - No quiz gating, pause/resume, modal close-path wiring, or gameplay logic changes.
+- Context/API verification note:
+  - Context7 MCP remains unavailable in this environment for direct lookup.
+  - No third-party API changes were introduced; implementation uses existing DOM image event/attribute behavior already present in project code.
 - Implemented approved rover intel video-media pass with minimal, scoped edits:
   - `data/rovers.json`
     - Added `videoUrl` key on all six rover objects.
@@ -954,6 +1136,32 @@
 - Reviewer output still pending due to environment model routing issue.
 
 ## Test Results
+- HUD-in-canvas + modal modernization verification (this pass):
+  - `node --check "game.js"` ✅
+  - Static HUD-reference removal checks ✅
+    - `id="health|wave|discoveries|parts|objective"` and corresponding `getElementById(...)` lookups: no matches.
+    - Legacy HUD class/selector references (`.hud`, `hud-kicker`, `hud-subtitle`, `hud-row`, `hud-chip`): no matches.
+  - Focused code-path checks (static) ✅
+    - HUD field updates present from existing state: `hudSnapshot.health/wave/discoveries/parts/objective` in `updateHud()`.
+    - Dedicated render order present: `drawHudOverlay()` in `draw()` after world/entity draws.
+    - Camera-independence present: HUD uses `ctx.setTransform(1, 0, 0, 1, 0, 0)` with save/restore.
+    - Game-over/victory overlays preserved: `drawStateOverlay()` with `MISSION FAILED` / `ROCKET LAUNCHED`.
+    - Modal close/backdrop/keyboard preserved: `#intelClose`, `data-close-intel`, and `Escape/Enter/Space` paths call `closeIntelModal()`.
+    - Pause/resume gate preserved during modal: `if (state !== GAME_STATE.PLAYING || intelOpen)`.
+    - Quiz wrong/correct gating preserved: `Not quite. Try again!` and `Correct! Rover retrieved.` with `markDiscoveryRetrieved()`.
+  - Limitation: browser runtime playtest not executable in this CLI-only environment.
+- Image-fallback removal verification (this pass):
+  - `node --check "game.js"` ✅
+  - `rg -n "imageFallback|intelImageFallback|intel-modal__image-fallback" --glob "*.{html,css,js}"` ✅
+    - No remaining matches in active source files.
+  - `git diff -- index.html style.css game.js` ✅
+    - Confirmed scope is limited to fallback removal + intel image state reset logic.
+  - Code-path verification (manual/static): ✅
+    - Pause gate still present: `if (state !== GAME_STATE.PLAYING || intelOpen)` in update loop.
+    - Shared modal close path unchanged (`closeIntelModal()` + `setIntelModalOpen(false)`).
+    - Quiz/retrieval flow unchanged (`renderIntelQuiz()` + `markDiscoveryRetrieved()`).
+    - Missing/failed image path now hides/clears image only (no fallback panel references).
+  - Limitation: browser runtime playtest not executable in this CLI-only environment.
 - Rover intel video-media verification (this pass):
   - `node --check "game.js"` ✅
   - `node -e "const fs=require('node:fs'); const data=JSON.parse(fs.readFileSync('data/rovers.json','utf8')); if(!Array.isArray(data)) throw new Error('rovers.json not array'); if(data.length!==6) throw new Error('expected 6 rover records'); const missing=data.filter((r)=>!Object.prototype.hasOwnProperty.call(r,'videoUrl')); if(missing.length) throw new Error('missing videoUrl'); const soj=data.find((r)=>r.name==='Sojourner'); if(!soj||soj.videoUrl!=='https://www.youtube.com/watch?v=9HGRReKUzfU&t=26s') throw new Error('bad Sojourner videoUrl'); console.log('ok');"` ✅
@@ -1038,7 +1246,7 @@
   - `rg -n "100dvh|overscroll-behavior|html,|overflow: hidden;|height: 100%|height: 100vh;" style.css` ✅
     - No viewport-fit containment signatures remain from the reverted patch; only pre-existing style usage remains (`min-height: 100vh`, `.canvas-wrap { overflow: hidden; }`).
 
-Handoff note: @reviewer please review the rover intel video-media implementation for (1) stacked image→video media layout in modal, (2) safe allowlisted YouTube URL parsing and 11-char ID validation, (3) canonical embed URL generation with no timestamp offset/start param, (4) iframe teardown on modal close to stop playback, and (5) no regressions to existing modal pause/resume + quiz-gating behavior.
+Handoff note: @reviewer please review the HUD-in-canvas + modal modernization result: verify all gameplay HUD info renders in canvas only (camera-independent pass), confirm no external HUD markup/CSS references remain, confirm bounded objective wrapping, and re-check modal close/backdrop/keyboard, pause/resume, and quiz wrong/correct retrieval gating behavior for regressions.
 
 ## Security Findings
 -
