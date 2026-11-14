@@ -215,19 +215,6 @@ canvas {
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
 }
 
-.intel-modal__image-fallback {
-  min-height: 220px;
-  max-height: 320px;
-  border-radius: var(--radius-md);
-  border: 1px dashed color-mix(in srgb, var(--panel-border) 65%, #223970);
-  background: rgba(24, 40, 84, 0.92);
-  color: var(--muted);
-  display: grid;
-  place-items: center;
-  padding: 12px;
-  text-align: center;
-}
-
 .intel-modal__video {
   display: grid;
   gap: var(--space-1);

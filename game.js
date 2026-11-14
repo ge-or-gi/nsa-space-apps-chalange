@@ -79,7 +79,6 @@ const intelUi = {
   close: document.getElementById("intelClose"),
   title: document.getElementById("intelTitle"),
   image: document.getElementById("intelImage"),
-  imageFallback: document.getElementById("intelImageFallback"),
   videoPanel: document.getElementById("intelVideoPanel"),
   videoEmbed: document.getElementById("intelVideoEmbed"),
   videoFallback: document.getElementById("intelVideoFallback"),
@@ -1164,25 +1163,23 @@ function renderIntelImage(intel) {
   const name = asText(intel.name);
   intelUi.image.alt = `${name} mission image`;
 
+  intelUi.image.onload = null;
+  intelUi.image.onerror = null;
+  intelUi.image.hidden = true;
+  intelUi.image.removeAttribute("src");
+
   if (!url) {
-    intelUi.image.hidden = true;
-    intelUi.image.removeAttribute("src");
-    intelUi.imageFallback.hidden = false;
-    intelUi.imageFallback.textContent = "Image not available";
     return;
   }
 
-  intelUi.image.hidden = false;
-  intelUi.imageFallback.hidden = true;
-  intelUi.imageFallback.textContent = "Image not available";
   intelUi.image.onerror = () => {
     intelUi.image.hidden = true;
-    intelUi.imageFallback.hidden = false;
-    intelUi.imageFallback.textContent = "Image failed to load";
+    intelUi.image.onload = null;
+    intelUi.image.onerror = null;
+    intelUi.image.removeAttribute("src");
   };
   intelUi.image.onload = () => {
     intelUi.image.hidden = false;
-    intelUi.imageFallback.hidden = true;
   };
   intelUi.image.src = url;
 }
