@@ -45,16 +45,22 @@ const RENDER_THEME = {
   },
 };
 
-const SPRITE_PATHS = {
-  player: "assets/sprites/player-astronaut.svg",
-  enemy: "assets/sprites/enemy-drone.svg",
-  bullet: "assets/sprites/projectile-bolt.svg",
-};
-
-const sprites = {
-  player: createSpriteAsset(SPRITE_PATHS.player),
-  enemy: createSpriteAsset(SPRITE_PATHS.enemy),
-  bullet: createSpriteAsset(SPRITE_PATHS.bullet),
+const DEFAULT_RENDER_MANIFEST = {
+  terrain: {
+    sky: "assets/backgrounds/sky/sky_gradient_day.png",
+    far: "assets/backgrounds/parallax/parallax_far_mountains.png",
+    mid: "assets/backgrounds/parallax/parallax_mid_dust.png",
+    near: "assets/backgrounds/parallax/parallax_near_rocks.png",
+  },
+  sprites: {
+    player: "assets/sprites/player/astronaut_idle.png",
+    enemy: "assets/sprites/enemies/drone_idle.png",
+    bullet: "assets/sprites/projectiles/bullet_small.png",
+  },
+  pickups: {
+    discovery: "assets/sprites/pickups/beacon_rover.png",
+    rocketPart: "assets/sprites/pickups/rocket_part_hull.png",
+  },
 };
 
 const canvas = document.getElementById("gameCanvas");
@@ -111,14 +117,22 @@ let launchTimer;
 let roverIntelByName = {};
 let seenIntelEntries = new Set();
 let intelOpen = false;
+let renderManifest = { ...DEFAULT_RENDER_MANIFEST };
+let renderAssets = createRenderAssets(renderManifest);
 
 function createSpriteAsset(src) {
   const image = new Image();
   const asset = {
+    src: typeof src === "string" ? src : "",
     image,
     loaded: false,
     failed: false,
   };
+
+  if (!asset.src) {
+    asset.failed = true;
+    return asset;
+  }
 
   image.onload = () => {
     asset.loaded = true;
@@ -128,8 +142,61 @@ function createSpriteAsset(src) {
     asset.failed = true;
   };
 
-  image.src = src;
+  image.src = asset.src;
   return asset;
+}
+
+function createRenderAssets(manifest) {
+  return {
+    terrainSky: createSpriteAsset(manifest?.terrain?.sky),
+    terrainFar: createSpriteAsset(manifest?.terrain?.far),
+    terrainMid: createSpriteAsset(manifest?.terrain?.mid),
+    terrainNear: createSpriteAsset(manifest?.terrain?.near),
+    player: createSpriteAsset(manifest?.sprites?.player),
+    enemy: createSpriteAsset(manifest?.sprites?.enemy),
+    bullet: createSpriteAsset(manifest?.sprites?.bullet),
+    discovery: createSpriteAsset(manifest?.pickups?.discovery),
+    rocketPart: createSpriteAsset(manifest?.pickups?.rocketPart),
+  };
+}
+
+function coerceManifestPath(value, fallback) {
+  return typeof value === "string" && value.trim() ? value.trim() : fallback;
+}
+
+async function loadAssetManifest() {
+  try {
+    const response = await fetch("assets/asset-manifest.json", { cache: "no-store" });
+    if (!response.ok) {
+      throw new Error(`Failed to load asset manifest: ${response.status}`);
+    }
+
+    const manifest = await response.json();
+    const render = manifest && typeof manifest === "object" ? manifest.render : null;
+
+    renderManifest = {
+      terrain: {
+        sky: coerceManifestPath(render?.terrain?.sky, DEFAULT_RENDER_MANIFEST.terrain.sky),
+        far: coerceManifestPath(render?.terrain?.far, DEFAULT_RENDER_MANIFEST.terrain.far),
+        mid: coerceManifestPath(render?.terrain?.mid, DEFAULT_RENDER_MANIFEST.terrain.mid),
+        near: coerceManifestPath(render?.terrain?.near, DEFAULT_RENDER_MANIFEST.terrain.near),
+      },
+      sprites: {
+        player: coerceManifestPath(render?.sprites?.player, DEFAULT_RENDER_MANIFEST.sprites.player),
+        enemy: coerceManifestPath(render?.sprites?.enemy, DEFAULT_RENDER_MANIFEST.sprites.enemy),
+        bullet: coerceManifestPath(render?.sprites?.bullet, DEFAULT_RENDER_MANIFEST.sprites.bullet),
+      },
+      pickups: {
+        discovery: coerceManifestPath(render?.pickups?.discovery, DEFAULT_RENDER_MANIFEST.pickups.discovery),
+        rocketPart: coerceManifestPath(render?.pickups?.rocketPart, DEFAULT_RENDER_MANIFEST.pickups.rocketPart),
+      },
+    };
+  } catch (error) {
+    renderManifest = { ...DEFAULT_RENDER_MANIFEST };
+    console.warn("Asset manifest unavailable; rendering fallbacks will be used.", error);
+  }
+
+  renderAssets = createRenderAssets(renderManifest);
 }
 
 function resetGame() {
@@ -489,6 +556,18 @@ function drawTerrain() {
   ctx.fillStyle = skyGrad;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
+  const skyTexture = renderAssets.terrainSky;
+  if (skyTexture.loaded) {
+    ctx.save();
+    ctx.globalAlpha = 0.28;
+    ctx.drawImage(skyTexture.image, 0, 0, canvas.width, canvas.height);
+    ctx.restore();
+  }
+
+  drawParallaxLayer(renderAssets.terrainFar, 0.16, canvas.height * 0.18, canvas.height * 0.5, 0.35);
+  drawParallaxLayer(renderAssets.terrainMid, 0.34, canvas.height * 0.36, canvas.height * 0.47, 0.4);
+  drawParallaxLayer(renderAssets.terrainNear, 0.58, canvas.height * 0.53, canvas.height * 0.42, 0.48);
+
   const glowX = canvas.width * 0.74;
   const glowY = canvas.height * 0.16;
   const glow = ctx.createRadialGradient(glowX, glowY, 12, glowX, glowY, canvas.width * 0.52);
@@ -522,15 +601,32 @@ function drawTerrain() {
   }
 }
 
+function drawParallaxLayer(asset, speed, y, height, alpha) {
+  if (!asset.loaded) return;
+  const image = asset.image;
+  const imageWidth = image.naturalWidth || image.width;
+  if (!imageWidth) return;
+  const scale = height / ((image.naturalHeight || image.height) || 1);
+  const drawWidth = Math.max(1, imageWidth * scale);
+  const offset = -((camera.x * speed) % drawWidth);
+
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  for (let x = offset - drawWidth; x < canvas.width + drawWidth; x += drawWidth) {
+    ctx.drawImage(image, x, y, drawWidth, height);
+  }
+  ctx.restore();
+}
+
 function drawPlayer() {
   const p = worldToScreen(player.x, player.y);
 
-  if (sprites.player.loaded) {
+  if (renderAssets.player.loaded) {
     const size = player.radius * 2.8;
     ctx.save();
     ctx.translate(p.x, p.y);
     ctx.rotate(player.angle);
-    ctx.drawImage(sprites.player.image, -size * 0.5, -size * 0.5, size, size);
+    ctx.drawImage(renderAssets.player.image, -size * 0.5, -size * 0.5, size, size);
     ctx.restore();
   } else {
     drawPlayerFallback(p);
@@ -575,13 +671,13 @@ function drawPlayerFallback(p) {
 function drawEnemies() {
   for (const enemy of enemies) {
     const p = worldToScreen(enemy.x, enemy.y);
-    if (sprites.enemy.loaded) {
+    if (renderAssets.enemy.loaded) {
       const angle = Math.atan2(player.y - enemy.y, player.x - enemy.x);
       const size = enemy.radius * 3;
       ctx.save();
       ctx.translate(p.x, p.y);
       ctx.rotate(angle);
-      ctx.drawImage(sprites.enemy.image, -size * 0.5, -size * 0.5, size, size);
+      ctx.drawImage(renderAssets.enemy.image, -size * 0.5, -size * 0.5, size, size);
       ctx.restore();
       continue;
     }
@@ -610,14 +706,14 @@ function drawEnemyFallback(p, enemy) {
 function drawBullets() {
   for (const bullet of bullets) {
     const p = worldToScreen(bullet.x, bullet.y);
-    if (sprites.bullet.loaded) {
+    if (renderAssets.bullet.loaded) {
       const angle = Math.atan2(bullet.vy, bullet.vx);
       const width = bullet.radius * 5.2;
       const height = bullet.radius * 2.2;
       ctx.save();
       ctx.translate(p.x, p.y);
       ctx.rotate(angle);
-      ctx.drawImage(sprites.bullet.image, -width * 0.5, -height * 0.5, width, height);
+      ctx.drawImage(renderAssets.bullet.image, -width * 0.5, -height * 0.5, width, height);
       ctx.restore();
       continue;
     }
@@ -659,8 +755,13 @@ function drawDiscoveries() {
     ctx.arc(p.x, p.y, d.radius, 0, Math.PI * 2);
     ctx.fill();
 
-    ctx.fillStyle = "#d9f4ff";
-    ctx.fillRect(p.x - 8, p.y - 8, 16, 16);
+    if (renderAssets.discovery.loaded) {
+      const size = d.radius * 2.1;
+      ctx.drawImage(renderAssets.discovery.image, p.x - size * 0.5, p.y - size * 0.5, size, size);
+    } else {
+      ctx.fillStyle = "#d9f4ff";
+      ctx.fillRect(p.x - 8, p.y - 8, 16, 16);
+    }
   }
 }
 
@@ -668,10 +769,16 @@ function drawParts() {
   for (const pObj of parts) {
     if (pObj.collected) continue;
     const p = worldToScreen(pObj.x, pObj.y);
-    ctx.fillStyle = "#ffe8a0";
-    ctx.fillRect(p.x - 10, p.y - 6, 20, 12);
-    ctx.strokeStyle = "#8d6d2e";
-    ctx.strokeRect(p.x - 10, p.y - 6, 20, 12);
+    if (renderAssets.rocketPart.loaded) {
+      const width = 26;
+      const height = 18;
+      ctx.drawImage(renderAssets.rocketPart.image, p.x - width * 0.5, p.y - height * 0.5, width, height);
+    } else {
+      ctx.fillStyle = "#ffe8a0";
+      ctx.fillRect(p.x - 10, p.y - 6, 20, 12);
+      ctx.strokeStyle = "#8d6d2e";
+      ctx.strokeRect(p.x - 10, p.y - 6, 20, 12);
+    }
   }
 }
 
@@ -971,7 +1078,7 @@ window.addEventListener("mouseup", (event) => {
 });
 
 bindIntelModalEvents();
-loadRoverIntel().finally(() => {
+Promise.allSettled([loadRoverIntel(), loadAssetManifest()]).finally(() => {
   resetGame();
   window.requestAnimationFrame(gameLoop);
 });

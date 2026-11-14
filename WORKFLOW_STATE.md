@@ -15,6 +15,7 @@
 - New change request: player sprite should be an astronaut with a pistol.
 - New bug report: screen/page moves when using arrow keys for game navigation; fix so gameplay keys do not scroll the page.
 - New change request: revert the last implemented viewport-fit change; then change movement keys to J/K/L/I directions.
+- New change request: integrate `mars-assets.zip` into the project so assets work with the proposed asset-manifest JSON feature.
 
 ## Clarified Scope
 - Build a Mars-themed rover survival mini-game prototype in HTML + JavaScript.
@@ -81,6 +82,10 @@
   - Revert only the most recent viewport-fit CSS containment patch.
   - Movement keys should be J/K/L/I only.
   - Keep other controls unchanged: mouse aim/fire, `E` interact, `R` restart.
+- Latest user clarifications for `mars-assets.zip` integration request:
+  - Yes: extract `mars-assets.zip` into project assets.
+  - Yes: create `assets/asset-manifest.json` based on actual extracted filenames.
+  - Yes: fully switch rendering to manifest-driven asset loading now.
 
 ## Open Questions
 - None blocking.
@@ -122,6 +127,10 @@
 - Revert only viewport-fit CSS patch; retain sprite pass and modernization changes.
 - Movement input must be J/K/L/I only (arrow keys disabled for movement).
 - Keep mouse aim/fire + `E` interact + `R` restart unchanged.
+- Must integrate local `mars-assets.zip` resources with the proposed JSON-based asset manifest flow.
+- Extract zip contents under project `assets/` and wire runtime to those extracted files.
+- Manifest must reflect actual extracted filenames/paths.
+- Rendering should be manifest-driven as primary path in this pass.
 
 ## Plan
 - Build a single-page browser game using HTML5 Canvas + vanilla JavaScript for fastest prototype delivery.
@@ -204,6 +213,14 @@
   - Update control hint text in `index.html` (and related UI text) to show J/K/L/I while preserving mouse + `E` + `R` hints.
   - Keep all gameplay logic, modal behavior, sprite rendering, and objective/wave systems unchanged.
   - Validate with syntax check and targeted keybinding code-path checks.
+- Asset-manifest integration plan (`mars-assets.zip`):
+  - Inspect and extract `mars-assets.zip` into the project asset tree under `assets/`.
+  - Build `assets/asset-manifest.json` from actual extracted filenames/paths, aligned to the proposed schema structure.
+  - Refactor `game.js` asset loading/rendering to use manifest-driven lookup/loading for player/enemy/projectile/background assets as primary.
+  - Preserve gameplay logic/input/objective systems; limit changes to asset loading/render pipeline and references.
+  - Keep robust fallback handling for missing/failed manifest assets to avoid hard crashes.
+  - Update UI/control hint text and other pending approved changes in same implementation pass only if not yet applied.
+  - Verify with syntax checks + targeted manifest/file-existence checks.
 
 ## Debate Notes
 - Planner note: chose Canvas + vanilla JS to minimize setup overhead and keep prototype iteration fast.
@@ -281,8 +298,20 @@
   - Remove arrow-key movement checks from input evaluation while preserving non-movement key handlers.
   - Update visible controls hint text so UI matches actual keybindings.
   - Keep sprite rendering and modal logic untouched; validate with syntax check + keybinding code-path scan.
+- Attempted `mars-assets.zip` manifest-switch `debater` handoff; blocked by environment model routing error: `Model not found: github-copilot/gpt-5.4`.
+- Fallback planner critique for manifest switch:
+  - Generate manifest after extraction using discovered filenames to avoid stale path mismatches.
+  - Keep asset-loading/render refactor isolated from gameplay update logic.
+  - Preserve runtime fallback for missing manifest entries/assets (warn + draw fallback primitive/sprite).
+  - Validate manifest references by checking file existence for every configured path.
+  - Keep keymapping/hint consistency with currently approved controls.
 
 ## Files To Change
+- Manifest integration pass (implemented this pass):
+  - `assets/**` (extracted `mars-assets.zip` nested asset pack + preview files into project assets tree)
+  - `assets/asset-manifest.json` (generated from actual extracted/current asset file paths with render mappings)
+  - `game.js` (manifest-driven render asset loading for terrain/player/enemy/bullet/discovery/parts with fallbacks)
+  - `WORKFLOW_STATE.md` (implementor status/notes/tests/next-agent handoff)
 - `assets/rovers/sojourner.jpg` (new local JPEG)
 - `assets/rovers/spirit.jpg` (new local JPEG)
 - `assets/rovers/opportunity.jpg` (new local JPEG)
@@ -338,6 +367,12 @@
   - `game.js` (movement key mapping to J/K/L/I only; remove arrow movement bindings)
   - `index.html` (controls hint text update)
   - `WORKFLOW_STATE.md` (planning/debate/handoff updates)
+- Manifest integration pass (planned):
+  - `mars-assets.zip` (input artifact; extracted)
+  - `assets/**` (new extracted files/directories from ZIP)
+  - `assets/asset-manifest.json` (new manifest generated from extracted filenames)
+  - `game.js` (manifest-driven asset loading/rendering integration)
+  - `WORKFLOW_STATE.md` (planning/debate/handoff updates)
 - Revert + remap pass (implemented this pass):
   - `style.css` (reverted only the viewport-fit containment additions from the most recent patch)
   - `game.js` (movement mapping changed to J/K/L/I only; arrow movement bindings removed)
@@ -347,6 +382,13 @@
   - `opencode.json` (`agent.debater.model` set to `github-copilot/gpt-5.6-luna`)
 
 ## Current Status
+- Manifest integration implementation complete:
+  - Extracted `mars-assets.zip` into `assets/` using shell-based unzip logic, including nested `mars_assets.zip` content and preview images.
+  - Created `assets/asset-manifest.json` from actual on-disk `assets/**` files (no assumed paths).
+  - Switched rendering to manifest-driven asset lookup in `game.js` for terrain layers + player/enemy/bullet + discovery/rocket-part visuals.
+  - Preserved gameplay logic, controls (`J/K/L/I`, mouse aim/fire, `E`, `R`), objectives, and rover intel modal behavior/content.
+  - Preserved robust runtime fallback behavior: if manifest load fails or an image is missing/failed, rendering falls back to existing primitive/geometric paths without crashing.
+  - Ready for reviewer validation.
 - Revert + remap implementation complete:
   - Reverted only the recent viewport-fit CSS containment changes (document/app full-viewport overflow lock) in `style.css`.
   - Updated movement keys to J/K/L/I-only (`I` up, `K` down, `J` left, `L` right) in `game.js`.
@@ -383,6 +425,15 @@
   - Other controls unchanged.
 - Phase 3 plan updated and ready for debater review.
 - Debater handoff attempted for revert+remap plan but blocked by model routing error.
+- Plan accepted with fallback critique; ready for implementor handoff.
+- Phase 1 (Clarify) reopened for new request: integrate `mars-assets.zip` with proposed JSON asset-manifest feature.
+- Note: direct `Read` on ZIP failed as expected for binary file; integration likely requires extraction/listing via shell tooling.
+- Phase 2 complete for `mars-assets.zip` integration:
+  - Extract zip into `assets/`.
+  - Generate manifest from actual extracted files.
+  - Fully switch to manifest-driven rendering.
+- Phase 3 plan updated and ready for debater review.
+- Debater handoff attempted for `mars-assets.zip` integration plan but blocked by model routing error.
 - Plan accepted with fallback critique; ready for implementor handoff.
 - Astronaut sprite visual pass implemented (player/enemy/projectile):
   - Added sprite assets under `assets/sprites/` and wired them in `game.js` rendering only.
@@ -495,11 +546,37 @@
 - Arrow keys do not move the player.
 - Mouse aim/fire, `E` interact, and `R` restart remain unchanged.
 - No regressions to gameplay logic, sprites, HUD, or rover modal behavior/content.
+- `mars-assets.zip` contents are extracted into project `assets/` structure and used by the game.
+- `assets/asset-manifest.json` exists and matches real extracted file paths.
+- Rendering path is manifest-driven for configured visual assets.
+- Missing/failed asset paths are handled gracefully (no runtime crash).
 
 ## Next Agent
-- `reviewer` — review viewport-fit revert scope and J/K/L/I-only movement remap for regressions.
+- `reviewer` — review manifest integration (zip extraction + generated manifest + manifest-driven render switch + fallback safety + no gameplay/control/modal regressions).
 
 ## Implementation Notes
+- Implemented approved manifest integration with minimal gameplay-risk scope:
+  - Extracted archive contents via shell/python zip tooling:
+    - outer zip: `mars-assets.zip` includes `mars_assets.zip` + preview files.
+    - nested `mars_assets.zip` extracted into project `assets/` with leading `assets/` stripped to avoid `assets/assets/...` nesting.
+  - Generated `assets/asset-manifest.json` by scanning real files under `assets/**` and writing:
+    - `files[]` entries (`path`, `kind`) for all discovered files,
+    - `render` map for active render slots (`terrain`, `sprites`, `pickups`).
+  - Refactored `game.js` render loading to be manifest-driven:
+    - Added `loadAssetManifest()` and `createRenderAssets()`.
+    - Added manifest-derived asset registry for:
+      - terrain (`sky`, `far`, `mid`, `near`),
+      - sprites (`player`, `enemy`, `bullet`),
+      - pickups (`discovery`, `rocketPart`).
+    - Replaced direct hardcoded sprite paths in draw paths with manifest-backed assets.
+    - Startup now uses `Promise.allSettled([loadRoverIntel(), loadAssetManifest()])` before reset/start.
+  - Fallback safety retained/improved:
+    - manifest load failure falls back to internal default manifest;
+    - missing/blank manifest path marks asset failed and safely uses existing fallback rendering;
+    - terrain still renders via gradient/grid/dust even when texture layers are unavailable.
+- Context/API verification note:
+  - Context7 MCP tool is not available in this environment, so direct Context7 API lookup could not be executed.
+  - No third-party framework/library APIs were introduced; implementation uses existing browser Canvas/Image/Fetch behavior already present in the project.
 - Implemented full browser-playable Canvas prototype with explicit states: `playing`, `game_over`, `victory`.
 - Added `index.html` shell with:
   - HUD fields for health, wave, rover discoveries, rocket parts, and objective text.
@@ -699,6 +776,11 @@
 - Reviewer output still pending due to environment model routing issue.
 
 ## Test Results
+- Manifest integration verification (this pass):
+  - `node --check "game.js"` ✅
+  - `node -e "const fs=require('node:fs'); JSON.parse(fs.readFileSync('assets/asset-manifest.json','utf8')); console.log('asset-manifest.json ok');"` ✅
+  - `node - <<'NODE' ...` (scripted check: every `files[].path` and every `render.*` src exists on disk) ✅
+    - Result: `manifest paths ok (73 files, 9 render src)`
 - `node --check game.js` ✅ (no syntax errors)
 - `node -e "JSON.parse(require('node:fs').readFileSync('data/rovers.json','utf8')); console.log('rovers.json ok')"` ✅
 - Manual code-path checks completed for:
@@ -753,7 +835,7 @@
   - `rg -n "100dvh|overscroll-behavior|html,|overflow: hidden;|height: 100%|height: 100vh;" style.css` ✅
     - No viewport-fit containment signatures remain from the reverted patch; only pre-existing style usage remains (`min-height: 100vh`, `.canvas-wrap { overflow: hidden; }`).
 
-Handoff note: @reviewer please review the targeted revert+remap change for (1) strict revert of only the recent viewport-fit containment CSS edits, (2) movement mapped to J/K/L/I only with no arrow-key movement path remaining, and (3) no regressions to rover modal behavior/content, sprite rendering fallback, or non-movement controls (`mouse`, `E`, `R`).
+Handoff note: @reviewer please review the manifest integration pass for (1) correct extraction of `mars-assets.zip` into `assets/`, (2) correctness of `assets/asset-manifest.json` against real files, (3) manifest-driven rendering now used as primary path in `game.js`, and (4) preserved fallback safety + no regressions to gameplay logic, approved controls (`J/K/L/I`, mouse, `E`, `R`), or rover intel modal behavior/content semantics.
 
 ## Security Findings
 -

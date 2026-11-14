@@ -1,0 +1,315 @@
+{
+  "version": 1,
+  "generatedBy": "implementor",
+  "files": [
+    {
+      "path": "assets/backgrounds/parallax/parallax_far_mountains.png",
+      "kind": "image"
+    },
+    {
+      "path": "assets/backgrounds/parallax/parallax_mid_dust.png",
+      "kind": "image"
+    },
+    {
+      "path": "assets/backgrounds/parallax/parallax_near_rocks.png",
+      "kind": "image"
+    },
+    {
+      "path": "assets/backgrounds/props/antenna_01.png",
+      "kind": "image"
+    },
+    {
+      "path": "assets/backgrounds/props/boulder_01.png",
+      "kind": "image"
+    },
+    {
+      "path": "assets/backgrounds/props/crate_science_01.png",
+      "kind": "image"
+    },
+    {
+      "path": "assets/backgrounds/props/crater_01.png",
+      "kind": "image"
+    },
+    {
+      "path": "assets/backgrounds/props/flag_nasa_01.png",
+      "kind": "image"
+    },
+    {
+      "path": "assets/backgrounds/props/module_broken_01.png",
+      "kind": "image"
+    },
+    {
+      "path": "assets/backgrounds/props/rock_medium_01.png",
+      "kind": "image"
+    },
+    {
+      "path": "assets/backgrounds/props/rock_small_01.png",
+      "kind": "image"
+    },
+    {
+      "path": "assets/backgrounds/props/rock_small_02.png",
+      "kind": "image"
+    },
+    {
+      "path": "assets/backgrounds/sky/sky_gradient_day.png",
+      "kind": "image"
+    },
+    {
+      "path": "assets/backgrounds/sky/sky_stars_soft.png",
+      "kind": "image"
+    },
+    {
+      "path": "assets/backgrounds/tiles/mars_tile_base_01.png",
+      "kind": "image"
+    },
+    {
+      "path": "assets/backgrounds/tiles/mars_tile_base_02.png",
+      "kind": "image"
+    },
+    {
+      "path": "assets/backgrounds/tiles/mars_tile_cracks_01.png",
+      "kind": "image"
+    },
+    {
+      "path": "assets/backgrounds/tiles/mars_tile_darkpatch_01.png",
+      "kind": "image"
+    },
+    {
+      "path": "assets/backgrounds/tiles/mars_tile_dust_01.png",
+      "kind": "image"
+    },
+    {
+      "path": "assets/preview_backgrounds.png",
+      "kind": "image"
+    },
+    {
+      "path": "assets/preview_sprites.png",
+      "kind": "image"
+    },
+    {
+      "path": "assets/rovers/curiosity.jpg",
+      "kind": "image"
+    },
+    {
+      "path": "assets/rovers/ingenuity.jpg",
+      "kind": "image"
+    },
+    {
+      "path": "assets/rovers/opportunity.jpg",
+      "kind": "image"
+    },
+    {
+      "path": "assets/rovers/perseverance.jpg",
+      "kind": "image"
+    },
+    {
+      "path": "assets/rovers/sojourner.jpg",
+      "kind": "image"
+    },
+    {
+      "path": "assets/rovers/spirit.jpg",
+      "kind": "image"
+    },
+    {
+      "path": "assets/sprites/enemies/bot_attack.png",
+      "kind": "image"
+    },
+    {
+      "path": "assets/sprites/enemies/bot_death.png",
+      "kind": "image"
+    },
+    {
+      "path": "assets/sprites/enemies/bot_idle.png",
+      "kind": "image"
+    },
+    {
+      "path": "assets/sprites/enemies/bot_move.png",
+      "kind": "image"
+    },
+    {
+      "path": "assets/sprites/enemies/crawler_attack.png",
+      "kind": "image"
+    },
+    {
+      "path": "assets/sprites/enemies/crawler_death.png",
+      "kind": "image"
+    },
+    {
+      "path": "assets/sprites/enemies/crawler_idle.png",
+      "kind": "image"
+    },
+    {
+      "path": "assets/sprites/enemies/crawler_move.png",
+      "kind": "image"
+    },
+    {
+      "path": "assets/sprites/enemies/drone_attack.png",
+      "kind": "image"
+    },
+    {
+      "path": "assets/sprites/enemies/drone_death.png",
+      "kind": "image"
+    },
+    {
+      "path": "assets/sprites/enemies/drone_idle.png",
+      "kind": "image"
+    },
+    {
+      "path": "assets/sprites/enemies/drone_move.png",
+      "kind": "image"
+    },
+    {
+      "path": "assets/sprites/enemy-drone.svg",
+      "kind": "image"
+    },
+    {
+      "path": "assets/sprites/fx/explosion_medium.png",
+      "kind": "image"
+    },
+    {
+      "path": "assets/sprites/fx/explosion_small.png",
+      "kind": "image"
+    },
+    {
+      "path": "assets/sprites/fx/impact_spark.png",
+      "kind": "image"
+    },
+    {
+      "path": "assets/sprites/fx/muzzle_flash.png",
+      "kind": "image"
+    },
+    {
+      "path": "assets/sprites/pickups/beacon_rover.png",
+      "kind": "image"
+    },
+    {
+      "path": "assets/sprites/pickups/energy_cell.png",
+      "kind": "image"
+    },
+    {
+      "path": "assets/sprites/pickups/health_pack.png",
+      "kind": "image"
+    },
+    {
+      "path": "assets/sprites/pickups/interact_prompt_e.png",
+      "kind": "image"
+    },
+    {
+      "path": "assets/sprites/pickups/rocket_part_engine.png",
+      "kind": "image"
+    },
+    {
+      "path": "assets/sprites/pickups/rocket_part_fuel.png",
+      "kind": "image"
+    },
+    {
+      "path": "assets/sprites/pickups/rocket_part_hull.png",
+      "kind": "image"
+    },
+    {
+      "path": "assets/sprites/pickups/rocket_part_nav.png",
+      "kind": "image"
+    },
+    {
+      "path": "assets/sprites/player/astronaut_hit_flash.png",
+      "kind": "image"
+    },
+    {
+      "path": "assets/sprites/player/astronaut_idle.png",
+      "kind": "image"
+    },
+    {
+      "path": "assets/sprites/player/astronaut_shoot_east.png",
+      "kind": "image"
+    },
+    {
+      "path": "assets/sprites/player/astronaut_shoot_north.png",
+      "kind": "image"
+    },
+    {
+      "path": "assets/sprites/player/astronaut_shoot_south.png",
+      "kind": "image"
+    },
+    {
+      "path": "assets/sprites/player/astronaut_shoot_west.png",
+      "kind": "image"
+    },
+    {
+      "path": "assets/sprites/player/astronaut_walk_east.png",
+      "kind": "image"
+    },
+    {
+      "path": "assets/sprites/player/astronaut_walk_north.png",
+      "kind": "image"
+    },
+    {
+      "path": "assets/sprites/player/astronaut_walk_south.png",
+      "kind": "image"
+    },
+    {
+      "path": "assets/sprites/player/astronaut_walk_west.png",
+      "kind": "image"
+    },
+    {
+      "path": "assets/sprites/player-astronaut.svg",
+      "kind": "image"
+    },
+    {
+      "path": "assets/sprites/projectile-bolt.svg",
+      "kind": "image"
+    },
+    {
+      "path": "assets/sprites/projectiles/bullet_small.png",
+      "kind": "image"
+    },
+    {
+      "path": "assets/sprites/projectiles/enemy_bolt_red.png",
+      "kind": "image"
+    },
+    {
+      "path": "assets/sprites/projectiles/laser_blue.png",
+      "kind": "image"
+    },
+    {
+      "path": "assets/sprites/ui/badge_star.png",
+      "kind": "image"
+    },
+    {
+      "path": "assets/sprites/ui/icon_discovery.png",
+      "kind": "image"
+    },
+    {
+      "path": "assets/sprites/ui/icon_health.png",
+      "kind": "image"
+    },
+    {
+      "path": "assets/sprites/ui/icon_parts.png",
+      "kind": "image"
+    },
+    {
+      "path": "assets/sprites/ui/icon_wave.png",
+      "kind": "image"
+    },
+    {
+      "path": "assets/sprites/ui/panel_corner.png",
+      "kind": "image"
+    }
+  ],
+  "render": {
+    "terrain": {
+      "sky": "assets/backgrounds/sky/sky_gradient_day.png",
+      "far": "assets/backgrounds/parallax/parallax_far_mountains.png",
+      "mid": "assets/backgrounds/parallax/parallax_mid_dust.png",
+      "near": "assets/backgrounds/parallax/parallax_near_rocks.png"
+    },
+    "sprites": {
+      "player": "assets/sprites/player/astronaut_idle.png",
+      "enemy": "assets/sprites/enemies/drone_idle.png",
+      "bullet": "assets/sprites/projectiles/bullet_small.png"
+    },
+    "pickups": {
+      "discovery": "assets/sprites/pickups/beacon_rover.png",
+      "rocketPart": "assets/sprites/pickups/rocket_part_hull.png"
+    }
+  }
+}
