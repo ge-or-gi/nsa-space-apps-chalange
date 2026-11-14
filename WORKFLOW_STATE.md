@@ -20,6 +20,7 @@
 - New change request: add a YouTube video for Sojourner intel (`https://www.youtube.com/watch?v=9HGRReKUzfU&t=26s`) as a second media item, with the same capability to be added for every rover as user provides links.
 - New bug-fix request: after local revert via `git checkout .`, remove `imageFallback` from rover intel modal because it is visibly showing.
 - New change request: move the game HUD into the canvas and make it more modern.
+- New gameplay-learning request: make rover discoveries appear one-by-one in chronological mission order, and show rover names clearly so players learn which rover came first/second/etc.
 
 ## Clarified Scope
 - Build a Mars-themed rover survival mini-game prototype in HTML + JavaScript.
@@ -114,6 +115,18 @@
   - Use playful NASA (kid-friendly) modern style direction.
   - Include modal visual modernization in the same pass.
   - HUD placement preference: corner cards + objective panel.
+- Latest user clarifications for rover chronology-learning request:
+  - Use launch-date order only.
+  - Include Ingenuity in the ordered sequence.
+  - Only one next required rover/vehicle is visible; unlock next after current retrieval.
+  - Show rover names/order in all three places: on-map label, HUD objective text, and modal context/title.
+  - Out-of-order targets remain hidden (no hint text).
+- Latest user clarifications for rover chronology-learning request:
+  - Sequence must use launch date order only.
+  - Include Ingenuity in the ordered sequence.
+  - Only the next required rover/vehicle should be shown; unlock next only after current is retrieved.
+  - Show rover name/order in all three places: on-map label, HUD objective text, and modal title/context.
+  - Out-of-order targets should stay hidden (no hint).
 
 ## Open Questions
 - None blocking.
@@ -178,6 +191,13 @@
 - This pass includes modal visual modernization in addition to HUD migration.
 - Preferred in-canvas layout: corner cards + objective panel.
 - Superseded: prior “limit to image-fallback-only” constraint is replaced by this new HUD+modal modernization request.
+- New sequencing requirement: rover progression should be gated by chronological mission order for educational flow (pending final ordering rule confirmation).
+- New learning UX requirement: rover names/order should be explicitly displayed to the player.
+- Sequencing rule is launch-date order only.
+- Sequence includes Ingenuity.
+- Discovery visibility is single-step: only next required entry is visible; later entries stay hidden.
+- Name/order labels must appear on-map, in HUD objective text, and in modal context.
+- No out-of-order hint text/UI should appear.
 
 ## Plan
 - Build a single-page browser game using HTML5 Canvas + vanilla JavaScript for fastest prototype delivery.
@@ -307,8 +327,53 @@
   - Modernize modal visuals in `style.css` (cards/chips/spacing/contrast polish) without changing modal data fields, close behavior, quiz gating, or pause semantics.
   - Keep controls and gameplay mechanics unchanged.
   - Validate with syntax checks + targeted code-path checks for pause/resume, quiz gating, and HUD data correctness.
+- Rover chronology-learning plan:
+  - In `game.js`, build one deterministic ordered sequence from rover intel entries sorted by launch date (including Ingenuity).
+  - Handle exact same-date ties deterministically (Perseverance/Ingenuity) using stable source-order fallback.
+  - Replace any hard-coded discovery progression with this sequence as single source of truth.
+  - Gate discovery visibility/spawn so only the current next sequence entry is visible/active on the map.
+  - Preserve existing retrieval gating: only after correct quiz answer is current entry marked retrieved and next entry unlocked.
+  - Add educational sequence labels:
+    - on-map active discovery label (e.g., `#1 Sojourner`),
+    - HUD objective text includes current sequence position + rover name,
+    - modal title/context includes sequence number + rover name.
+  - Keep out-of-order entries fully hidden with no extra hint UI (no render/label/interaction/prompt).
+  - Preserve controls, combat/wave mechanics, and pause/resume behavior.
+  - Validate launch-order progression correctness, tie-order determinism, and objective counter integrity.
 
 ## Debate Notes
+- Chronology-learning review:
+  - Verdict: revise before implementation; the direction is correct, but the current plan needs explicit handling for equal launch dates and a single source of truth for the active target.
+  - `data/rovers.json` has Perseverance and Ingenuity both dated July 30, 2020. Launch-date sorting alone cannot distinguish their order; define a deterministic tie policy (preserve the roster/data order only for exact same-date ties) and document it, without introducing landing-date or mission-status ordering.
+  - Build the ordered sequence only after rover JSON is loaded, and use that same sequence for node creation, visibility, interaction eligibility, HUD text, and modal context. Do not retain the hard-coded discovery-name order as a competing progression source.
+  - “Hidden” must mean later nodes are not drawn, labeled, targetable, or discoverable through interaction prompts; already retrieved nodes may remain as non-interactive completion markers only if existing presentation requires them.
+  - Guard against stale/modal or duplicate interactions: only the current active node may open the modal, and a correct quiz answer must advance exactly once. Preserve the existing quiz-gated `found` mutation, pause gate, and all close paths.
+  - Keep scope minimal. No new dependency, asset, control, combat, wave, or modal architecture change is needed. Context7 was unavailable; no new library/API behavior is introduced.
+
+## Verdict
+- revise before implementation
+
+## Problems in Current Plan
+- Equal launch dates for Perseverance and Ingenuity make “launch-date order only” under-specified; an unstable sort or incidental object order could produce inconsistent learning order.
+- The plan says to gate visibility/spawn but does not explicitly require hiding later nodes from drawing, interaction lookup, and prompt generation; merely disabling them would violate the no-hint requirement.
+- It does not explicitly remove the existing hard-coded `spawnDiscoveryNodes()` roster order as a competing source of progression truth, nor ensure sequencing waits for loaded JSON.
+- It does not require sequence labels to use one shared ordinal/name formatter across map, HUD, and modal, risking mismatched order text.
+- Acceptance criteria still contain stale wording that can imply remote images and do not state the exact hidden/no-hint and equal-date requirements.
+
+## Better Plan
+- Keep the planned minimal files: `game.js`, `data/rovers.json` only if needed to normalize/record the exact-date tie order, and `WORKFLOW_STATE.md`; do not change controls, assets, quiz schema, or gameplay mechanics.
+- In `game.js`, create one normalized rover sequence from the loaded records, sort by parsed launch date ascending, and preserve source roster order only when launch dates are exactly equal. Validate that all six expected entries, including Ingenuity, have usable launch years before creating discovery nodes.
+- Replace the hard-coded discovery roster with sequence-derived nodes and track `nextSequenceIndex`/equivalent from existing `found` state. Render, interact with, and label only the current node; keep later nodes fully hidden and omit any out-of-order hint.
+- Preserve retrieval gating: opening the current node does not mark it found; only the existing correct launch-year quiz path marks it found and advances the next target once. Keep modal pause/resume, close/backdrop/keyboard behavior, counters, parts, and victory logic unchanged.
+- Add one shared sequence-context helper for `#N Name`/equivalent, used by the on-map label, HUD objective, and modal title/context. Ensure objective text transitions to parts/rocket states after the final retrieval.
+- Validate with `node --check game.js`, JSON parse/schema checks, static checks for no legacy hard-coded progression, and focused browser/manual checks for exact order, equal-date determinism, hidden later nodes/no hints, labels in all three locations, wrong/correct retries, reset, and modal pause/close.
+
+## Recommendation
+- Revise the plan to make equal-date ordering and complete hidden-state enforcement explicit, then implement the single sequence-derived active-target path without touching mechanics or quiz/modal behavior.
+- Context/API verification for launch-date sequencing:
+  - MDN `Date.parse()` returns a timestamp or `NaN`, but parsing non-standard date strings can be inconsistent across engines.
+  - For stable ordering, implementation should prefer explicit/normalized launch-date parsing with deterministic fallback handling.
+  - Context7 MCP is unavailable in this environment; MDN used as authoritative fallback.
 - HUD-in-canvas modernization review:
   - Verdict: revise before implementation; the direction is correct, but the plan needs a tighter migration and regression boundary.
   - The proposed three-file scope is appropriate and minimal (`game.js`, `index.html`, `style.css`); no new dependency, asset, or gameplay-state refactor is needed.
@@ -464,6 +529,13 @@
   - Acceptance Criteria: require the canonical beginning-of-video embed, no iframe for missing/invalid URLs, playback stops when modal closes, and explicit verification that image-first stacking, pause/resume, close paths, and quiz gating remain unchanged.
 
 ## Files To Change
+- Rover chronology-learning pass (implemented this pass):
+  - `game.js` (launch-date sequence built from loaded rover data; stable same-date tie handling by source order; active-target-only draw/interaction/prompt; shared `#N Name` helper wired to map label + HUD objective + modal title/context)
+  - `WORKFLOW_STATE.md` (implementor status/notes/tests/next-agent handoff updates)
+- Rover chronology-learning pass (planned):
+  - `game.js` (launch-date sequence derivation, single-visible-next discovery gating, sequence labels in map/HUD/modal)
+  - `data/rovers.json` (only if launch-date normalization is needed for deterministic sorting; no schema break)
+  - `WORKFLOW_STATE.md` (planning/debate/handoff updates)
 - HUD-in-canvas + modal modernization pass (implemented this pass):
   - `game.js` (kept HUD fully canvas-rendered in dedicated screen-space pass; removed DOM HUD dependency path remains neutralized; bounded objective wrapping/clamping retained)
   - `index.html` (external gameplay HUD markup removed from visible layout; canvas/controls/modal hooks preserved)
@@ -581,6 +653,29 @@
   - `opencode.json` (`agent.debater.model` set to `github-copilot/gpt-5.6-luna`)
 
 ## Current Status
+- Rover chronology-learning implementation complete (this pass):
+  - Discovery sequence now comes from loaded rover intel entries sorted by launch date ascending.
+  - Exact same-date ties are deterministic via source-order fallback (Perseverance stays before Ingenuity for 2020-07-30 tie).
+  - Only the active next discovery is visible/interactive/prompted; later discoveries are fully hidden (no draw, no proximity prompt, no interaction eligibility).
+  - Shared `#N Name` label is used on-map (active beacon), in HUD objective text, and in modal title/context.
+  - Quiz-gated retrieval flow remains idempotent and advances exactly once on correct answer.
+  - Controls/mechanics/modal pause-close behavior preserved.
+  - Ready for reviewer validation.
+- Chronology-learning plan reviewed: revise before implementation.
+- Required pre-implementation adjustments recorded in Debate Notes: deterministic exact-date tie handling (Perseverance/Ingenuity), sequence-derived active target, fully hidden later nodes/no hints, shared `#N Name` context, and focused progression/modal regression checks.
+- Phase 1 (Clarify) reopened for new gameplay-learning request:
+  - User wants rover discoveries to unlock sequentially by mission chronology.
+  - User wants rover names shown clearly so players learn first/second/etc order.
+- Phase 2 complete for rover chronology-learning request:
+  - Launch-date ordering only.
+  - Include Ingenuity in sequence.
+  - Show only one next required entry; unlock next after retrieval.
+  - Display name/order in all three places (map label, HUD objective, modal context/title).
+  - Keep out-of-order entries hidden with no hint.
+- Phase 3 complete for rover chronology-learning:
+  - Debater review completed with required hardening (same-date deterministic ties, single sequence source, fully hidden later nodes, shared `#N Name` labels).
+  - Plan accepted and ready for implementor handoff.
+- Phase 3 complete for rover chronology-learning: debater review returned required hardening adjustments; plan updated accordingly and ready for implementor handoff.
 - HUD-in-canvas + modal modernization implementation complete (this pass):
   - All gameplay HUD fields (health, wave, rover progress, rocket-part progress, objective/status) render inside canvas via `drawHudOverlay()`.
   - HUD pass is camera-independent (`ctx.save()` + `ctx.setTransform(1,0,0,1,0,0)` + `ctx.restore()`) and drawn after world/entities.
@@ -806,6 +901,11 @@
 - `assets/asset-manifest.json` exists and matches real extracted file paths.
 - Rendering path is manifest-driven for configured visual assets.
 - Missing/failed asset paths are handled gracefully (no runtime crash).
+- Rover discoveries unlock in launch-date chronological order only (including Ingenuity).
+- If two entries share same launch date, order remains deterministic via stable source-order tie handling.
+- Only the current next sequence target is visible/interactive; later targets are fully hidden with no hint/prompt.
+- Rover sequence context (`#N Name`) is shown on-map for active target, in HUD objective text, and in modal context/title.
+- Modal title explicitly shows sequence context as `#N Name Intel` while discovery quiz/context is active.
 - Rover modal includes one multiple-choice launch-year question.
 - Only a correct launch-year answer marks that rover as retrieved.
 - Wrong answers allow unlimited retries in the same modal.
@@ -826,13 +926,41 @@
 - Gameplay mechanics, controls, pause/resume logic, and quiz/retrieval gating remain unchanged.
 
 ## Next Agent
-- `reviewer` — review the completed HUD-in-canvas + modal modernization implementation:
-  - verify HUD remains fully in-canvas and camera-independent,
-  - confirm external HUD markup/CSS references are removed,
-  - confirm objective panel wrapping/clamping and bounded layout,
-  - confirm modal close/backdrop/keyboard + pause/resume + quiz gating behavior are unchanged.
+- `reviewer` — validate chronology-learning implementation:
+  - confirm launch-date ordering includes Ingenuity and same-date tie behavior is deterministic by source order;
+  - confirm only active target is rendered/prompted/interactable and later targets stay fully hidden;
+  - confirm `#N Name` consistency in map label, HUD objective, and modal title/context;
+  - confirm wrong-answer retries do not advance and correct answer advances once;
+  - confirm modal pause/resume/close paths and controls/mechanics remain unchanged.
 
 ## Implementation Notes
+- Implemented approved rover chronology-learning plan with minimal scope:
+  - `game.js`
+    - Added sequence state `roverDiscoverySequence` built in `loadRoverIntel()` from JSON entries using `buildRoverDiscoverySequence(entries)`.
+    - Added deterministic date parsing helper `parseLaunchDateForSequence()`:
+      - parses normalized launch-date strings,
+      - strips parenthetical annotations,
+      - falls back to year-only UTC when needed,
+      - unresolved dates sort last.
+    - Sorting now uses launch timestamp ascending with stable source-order fallback for exact ties.
+    - `spawnDiscoveryNodes()` now uses sequence order from loaded data (single progression source) and stores `sequenceIndex` per node.
+    - Added active-target helpers:
+      - `getActiveDiscoveryNode()` (first not-found in sequence),
+      - `isActiveDiscoveryNode()` guard,
+      - `formatDiscoverySequenceLabel()` shared `#N Name` formatter.
+    - Enforced hidden/active gating:
+      - `drawDiscoveries()` skips all future (out-of-order) nodes,
+      - `handleInteraction()` can open intel only for active node,
+      - `getNearbyInteractable()` only prompts for active node,
+      - `maybeShowDiscoveryIntel()` refuses non-active nodes.
+    - Applied shared label across all requested surfaces:
+      - map label near active discovery,
+      - HUD objective text via `getObjectiveText()`,
+      - modal title/context (`#N Name Intel` + prefixed summary context).
+    - Preserved quiz gating/idempotence by hardening `markDiscoveryRetrieved()` to require current active node before mutating `found`.
+- Context/API verification note for this pass:
+  - Context7 MCP remains unavailable in this environment.
+  - Used MDN reference for `Array.prototype.sort()` stability and comparator semantics; implementation still includes explicit source-index tie fallback for determinism.
 - Implemented approved HUD-in-canvas + modal modernization scope with minimal changes:
   - `game.js`
     - Preserved/used dedicated screen-space HUD pass (`drawHudOverlay`) called in final render flow after world entities.
@@ -1136,6 +1264,26 @@
 - Reviewer output still pending due to environment model routing issue.
 
 ## Test Results
+- Rover chronology-learning verification (this pass):
+  - `node --check "game.js"` ✅
+  - `node -e "JSON.parse(require('node:fs').readFileSync('data/rovers.json','utf8')); console.log('rovers.json ok')"` ✅
+  - Static progression-path checks ✅
+    - `rg -n "spawnDiscoveryNodes\(|buildRoverDiscoverySequence|parseLaunchDateForSequence|formatDiscoverySequenceLabel|getActiveDiscoveryNode" game.js`
+      - confirms sequence derivation + shared formatter + active-target helpers wired.
+    - no active hard-coded roster order path remains in interaction/prompt/draw flow.
+  - Deterministic ordering check (including Ingenuity + same-date tie) ✅
+    - `node - <<'NODE' ...` computed sequence from `data/rovers.json` launch dates:
+      - `Sojourner -> Spirit -> Opportunity -> Curiosity -> Perseverance -> Ingenuity`
+      - verifies stable tie ordering (`Perseverance` index < `Ingenuity` index) for equal launch date.
+  - Focused code-path verification (static) ✅
+    - Hidden later targets: `drawDiscoveries()` skips `!found && d !== activeDiscovery`.
+    - No out-of-order prompt/hint: `getNearbyInteractable()` only checks active discovery.
+    - No out-of-order interaction: `handleInteraction()` + `maybeShowDiscoveryIntel()` gate on active discovery.
+    - Label consistency: `formatDiscoverySequenceLabel()` used in map draw, HUD objective, and modal title/context.
+    - Wrong answer retry path unchanged (`Not quite. Try again!`) and does not call retrieval mutation.
+    - Correct answer path still calls `markDiscoveryRetrieved()` once; guard prevents double-count.
+    - Modal close/backdrop/keyboard and pause/resume gates unchanged (`closeIntelModal()`, `setIntelModalOpen`, `if (state !== GAME_STATE.PLAYING || intelOpen)`).
+  - Limitation: browser runtime playtest not executable in this CLI-only environment.
 - HUD-in-canvas + modal modernization verification (this pass):
   - `node --check "game.js"` ✅
   - Static HUD-reference removal checks ✅
@@ -1246,7 +1394,7 @@
   - `rg -n "100dvh|overscroll-behavior|html,|overflow: hidden;|height: 100%|height: 100vh;" style.css` ✅
     - No viewport-fit containment signatures remain from the reverted patch; only pre-existing style usage remains (`min-height: 100vh`, `.canvas-wrap { overflow: hidden; }`).
 
-Handoff note: @reviewer please review the HUD-in-canvas + modal modernization result: verify all gameplay HUD info renders in canvas only (camera-independent pass), confirm no external HUD markup/CSS references remain, confirm bounded objective wrapping, and re-check modal close/backdrop/keyboard, pause/resume, and quiz wrong/correct retrieval gating behavior for regressions.
+Handoff note: @reviewer please review the chronology-learning implementation in `game.js`: verify launch-date-only progression (including Ingenuity), deterministic same-date tie handling, full hidden-state enforcement for out-of-order targets, shared `#N Name` label consistency across map/HUD/modal, and no regressions in quiz gating, modal pause/close behavior, controls, and core mechanics.
 
 ## Security Findings
 -

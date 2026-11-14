@@ -122,6 +122,7 @@ let waveBreakTimer;
 let rocketZone;
 let launchTimer;
 let roverIntelByName = {};
+let roverDiscoverySequence = [];
 let seenIntelEntries = new Set();
 let intelOpen = false;
 let activeDiscoveryNode = null;
@@ -265,11 +266,15 @@ function spawnDust(amount) {
 }
 
 function spawnDiscoveryNodes() {
-  const names = ["Sojourner", "Spirit", "Opportunity", "Curiosity", "Perseverance", "Ingenuity"];
-  return names.slice(0, CONFIG.totalDiscoveries).map((name) => ({
+  const sequence = roverDiscoverySequence.length
+    ? roverDiscoverySequence
+    : ["Sojourner", "Spirit", "Opportunity", "Curiosity", "Perseverance", "Ingenuity"];
+
+  return sequence.slice(0, CONFIG.totalDiscoveries).map((name, index) => ({
     ...randomMapPoint(),
     radius: 20,
     name,
+    sequenceIndex: index,
     found: false,
   }));
 }
@@ -342,7 +347,12 @@ function getObjectiveText() {
   }
 
   if (!allDiscoveriesFound()) {
-    return "Find all NASA rovers/robots (press E near a beacon).";
+    const active = getActiveDiscoveryNode();
+    const label = formatDiscoverySequenceLabel(active);
+    if (label) {
+      return `Retrieve ${label} (press E near a beacon).`;
+    }
+    return "Find the next rover/vehicle in launch order (press E near a beacon).";
   }
 
   if (!allPartsCollected()) {
@@ -512,11 +522,10 @@ function updateWaveFlow(dt) {
 }
 
 function handleInteraction() {
-  for (const d of discoveries) {
-    if (!d.found && distance(player.x, player.y, d.x, d.y) <= CONFIG.interactionRange) {
-      maybeShowDiscoveryIntel(d);
-      return;
-    }
+  const activeDiscovery = getActiveDiscoveryNode();
+  if (activeDiscovery && distance(player.x, player.y, activeDiscovery.x, activeDiscovery.y) <= CONFIG.interactionRange) {
+    maybeShowDiscoveryIntel(activeDiscovery);
+    return;
   }
 
   for (const p of parts) {
@@ -873,7 +882,13 @@ function drawBulletFallback(p, bullet) {
 }
 
 function drawDiscoveries() {
+  const activeDiscovery = getActiveDiscoveryNode();
+
   for (const d of discoveries) {
+    if (!d.found && d !== activeDiscovery) {
+      continue;
+    }
+
     const p = worldToScreen(d.x, d.y);
     if (d.found) {
       ctx.fillStyle = "rgba(115, 243, 167, 0.86)";
@@ -900,6 +915,15 @@ function drawDiscoveries() {
     } else {
       ctx.fillStyle = "#d9f4ff";
       ctx.fillRect(p.x - 8, p.y - 8, 16, 16);
+    }
+
+    const sequenceLabel = formatDiscoverySequenceLabel(d);
+    if (sequenceLabel) {
+      ctx.fillStyle = "#ecfbff";
+      ctx.font = "700 14px Inter, Arial";
+      ctx.textAlign = "center";
+      ctx.fillText(sequenceLabel, p.x, p.y - d.radius - 12);
+      ctx.textAlign = "start";
     }
   }
 }
@@ -965,10 +989,9 @@ function drawInteractionPrompt() {
 }
 
 function getNearbyInteractable() {
-  for (const d of discoveries) {
-    if (!d.found && distance(player.x, player.y, d.x, d.y) <= CONFIG.interactionRange) {
-      return { action: "scan rover", label: d.name };
-    }
+  const activeDiscovery = getActiveDiscoveryNode();
+  if (activeDiscovery && distance(player.x, player.y, activeDiscovery.x, activeDiscovery.y) <= CONFIG.interactionRange) {
+    return { action: "scan rover", label: formatDiscoverySequenceLabel(activeDiscovery) || activeDiscovery.name };
   }
 
   for (const p of parts) {
@@ -1022,6 +1045,7 @@ function gameLoop(timestamp) {
 
 function maybeShowDiscoveryIntel(discoveryNode) {
   if (!discoveryNode || typeof discoveryNode.name !== "string") return;
+  if (!isActiveDiscoveryNode(discoveryNode)) return;
   openIntelModal(discoveryNode.name, discoveryNode);
 }
 
@@ -1054,7 +1078,8 @@ function openIntelModal(name, discoveryNode = null) {
     videoUrl: "",
   };
 
-  intelUi.title.textContent = `${intel.name} Intel`;
+  const sequenceLabel = formatDiscoverySequenceLabel(discoveryNode) || asText(intel.name);
+  intelUi.title.textContent = `${sequenceLabel} Intel`;
   intelUi.summary.textContent = asText(intel.missionSummary);
   intelUi.launchDate.textContent = asText(intel.launchDate);
   intelUi.landingDate.textContent = asText(intel.landingDate);
@@ -1070,6 +1095,8 @@ function openIntelModal(name, discoveryNode = null) {
     li.textContent = asText(fact);
     intelUi.achievements.append(li);
   }
+
+  intelUi.summary.textContent = `${sequenceLabel} mission intel. ${asText(intel.missionSummary)}`;
 
   renderIntelImage(intel);
   renderIntelVideo(intel);
@@ -1198,10 +1225,70 @@ function setQuizFeedback(message, status) {
 }
 
 function markDiscoveryRetrieved() {
-  if (!activeDiscoveryNode || activeDiscoveryNode.found) return;
+  if (!activeDiscoveryNode || activeDiscoveryNode.found || !isActiveDiscoveryNode(activeDiscoveryNode)) return;
   activeDiscoveryNode.found = true;
   seenIntelEntries.add(activeDiscoveryNode.name);
   updateHud();
+}
+
+function isActiveDiscoveryNode(discoveryNode) {
+  return Boolean(discoveryNode) && discoveryNode === getActiveDiscoveryNode();
+}
+
+function getActiveDiscoveryNode() {
+  return discoveries.find((d) => !d.found) || null;
+}
+
+function formatDiscoverySequenceLabel(discoveryNode) {
+  if (!discoveryNode || typeof discoveryNode.name !== "string") return "";
+  const sequenceIndex = Number.isInteger(discoveryNode.sequenceIndex)
+    ? discoveryNode.sequenceIndex
+    : discoveries.findIndex((candidate) => candidate.name === discoveryNode.name);
+
+  if (!Number.isInteger(sequenceIndex) || sequenceIndex < 0) {
+    return asText(discoveryNode.name);
+  }
+
+  return `#${sequenceIndex + 1} ${asText(discoveryNode.name)}`;
+}
+
+function parseLaunchDateForSequence(launchDate) {
+  if (typeof launchDate !== "string") return Number.POSITIVE_INFINITY;
+  const trimmed = launchDate.trim();
+  if (!trimmed) return Number.POSITIVE_INFINITY;
+
+  const normalized = trimmed.replace(/\([^)]*\)/g, "").trim();
+  const parsed = Date.parse(normalized || trimmed);
+  if (Number.isFinite(parsed)) return parsed;
+
+  const launchYear = parseLaunchYear(trimmed);
+  if (Number.isInteger(launchYear)) {
+    return Date.UTC(launchYear, 0, 1);
+  }
+
+  return Number.POSITIVE_INFINITY;
+}
+
+function buildRoverDiscoverySequence(entries) {
+  if (!Array.isArray(entries)) return [];
+
+  return entries
+    .map((entry, sourceIndex) => {
+      if (!entry || typeof entry.name !== "string" || !entry.name.trim()) return null;
+      return {
+        name: entry.name.trim(),
+        sourceIndex,
+        launchOrderValue: parseLaunchDateForSequence(entry.launchDate),
+      };
+    })
+    .filter(Boolean)
+    .sort((a, b) => {
+      if (a.launchOrderValue !== b.launchOrderValue) {
+        return a.launchOrderValue - b.launchOrderValue;
+      }
+      return a.sourceIndex - b.sourceIndex;
+    })
+    .map((entry) => entry.name);
 }
 
 function renderIntelQuiz(intel, discoveryNode) {
@@ -1344,8 +1431,14 @@ async function loadRoverIntel() {
       if (!entry || typeof entry.name !== "string") continue;
       roverIntelByName[entry.name] = entry;
     }
+
+    const sequence = buildRoverDiscoverySequence(entries);
+    roverDiscoverySequence = sequence.length
+      ? sequence
+      : ["Sojourner", "Spirit", "Opportunity", "Curiosity", "Perseverance", "Ingenuity"];
   } catch (error) {
     roverIntelByName = {};
+    roverDiscoverySequence = ["Sojourner", "Spirit", "Opportunity", "Curiosity", "Perseverance", "Ingenuity"];
     console.warn("Rover intel unavailable; fallback text will be used.", error);
   }
 }
