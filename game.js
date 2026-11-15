@@ -99,6 +99,23 @@ const intelUi = {
   imageSource: document.getElementById("intelImageSource"),
 };
 
+const INTEL_MODAL_STEP_COUNT = 3;
+const TYPEWRITER_MEDIUM_MS = 30;
+
+const intelStepUi = {
+  content: document.querySelector(".intel-modal__content"),
+  media: document.querySelector(".intel-modal__media"),
+  details: document.querySelector(".intel-modal__details"),
+  objectiveHeading: null,
+  achievementsHeading: null,
+  quizSection: document.querySelector(".intel-modal__quiz"),
+  quizHeading: null,
+  nav: null,
+  back: null,
+  next: null,
+  status: null,
+};
+
 function setIntelModalOpen(isOpen) {
   intelOpen = isOpen;
   if (!intelUi.root) return;
@@ -127,6 +144,10 @@ let seenIntelEntries = new Set();
 let intelOpen = false;
 let activeDiscoveryNode = null;
 let autoCloseIntelTimer = null;
+let intelModalSessionToken = 0;
+let intelModalCurrentStep = 0;
+let intelStepSourceTargets = [[], [], []];
+let intelTypewriterController = null;
 let renderManifest = { ...DEFAULT_RENDER_MANIFEST };
 let renderAssets = createRenderAssets(renderManifest);
 let hudSnapshot = {
@@ -250,6 +271,267 @@ function resetGame() {
 
   spawnWave(wave);
   updateHud();
+}
+
+function scheduleTypewriter(controller, callback, delay) {
+  const timeoutId = window.setTimeout(() => {
+    controller.timeoutIds.delete(timeoutId);
+    if (!intelTypewriterController || controller.cancelled || intelTypewriterController !== controller) return;
+    callback();
+  }, delay);
+  controller.timeoutIds.add(timeoutId);
+}
+
+function cancelIntelTypewriter() {
+  if (!intelTypewriterController) return;
+  intelTypewriterController.cancelled = true;
+  for (const timeoutId of intelTypewriterController.timeoutIds) {
+    window.clearTimeout(timeoutId);
+  }
+  intelTypewriterController.timeoutIds.clear();
+  intelTypewriterController = null;
+}
+
+function createStepTextTarget(element, text) {
+  return {
+    element,
+    sourceText: typeof text === "string" ? text : "",
+    write(value) {
+      if (!this.element) return;
+      this.element.textContent = value;
+    },
+  };
+}
+
+function createNodeTextTarget(node, text) {
+  return {
+    sourceText: typeof text === "string" ? text : "",
+    write(value) {
+      if (!node) return;
+      node.textContent = value;
+    },
+  };
+}
+
+function setStepVisibility(stepIndex) {
+  const showStepOne = stepIndex === 0;
+  const showStepTwo = stepIndex === 1;
+  const showStepThree = stepIndex === 2;
+
+  if (intelStepUi.details) intelStepUi.details.hidden = !showStepOne;
+  if (intelStepUi.objectiveHeading) intelStepUi.objectiveHeading.hidden = !showStepOne;
+  if (intelUi.objective) intelUi.objective.hidden = !showStepOne;
+
+  if (intelStepUi.media) intelStepUi.media.hidden = !showStepTwo;
+  if (intelStepUi.achievementsHeading) intelStepUi.achievementsHeading.hidden = !showStepTwo;
+  if (intelUi.achievements) intelUi.achievements.hidden = !showStepTwo;
+  if (intelUi.source) intelUi.source.hidden = !showStepTwo;
+  if (intelUi.imageSource) intelUi.imageSource.hidden = !showStepTwo;
+
+  if (intelStepUi.quizSection) intelStepUi.quizSection.hidden = !showStepThree;
+  if (intelUi.quizFeedback && showStepThree) {
+    intelUi.quizFeedback.hidden = false;
+  }
+}
+
+function setQuizOptionsDisabled(disabled) {
+  if (!intelUi.quizOptions) return;
+  const optionButtons = intelUi.quizOptions.querySelectorAll("button");
+  for (const button of optionButtons) {
+    button.disabled = disabled;
+  }
+}
+
+function setStepNavigationState() {
+  if (!intelStepUi.back || !intelStepUi.next || !intelStepUi.status) return;
+  intelStepUi.back.disabled = intelModalCurrentStep <= 0;
+  intelStepUi.next.disabled = intelModalCurrentStep >= INTEL_MODAL_STEP_COUNT - 1;
+  intelStepUi.status.textContent = `Step ${intelModalCurrentStep + 1} of ${INTEL_MODAL_STEP_COUNT}`;
+}
+
+function captureAttributionTargets(element) {
+  if (!element) return [];
+  const targets = [];
+  const prefixNode = element.firstChild;
+  if (prefixNode?.nodeType === Node.TEXT_NODE) {
+    targets.push(createNodeTextTarget(prefixNode, prefixNode.textContent || ""));
+  }
+  const link = element.querySelector("a");
+  if (link) {
+    targets.push(createStepTextTarget(link, link.textContent || ""));
+  }
+  return targets;
+}
+
+function captureIntelStepSourceTargets() {
+  const stepOneTargets = [
+    createStepTextTarget(intelUi.title, intelUi.title?.textContent || ""),
+    createStepTextTarget(intelUi.summary, intelUi.summary?.textContent || ""),
+  ];
+
+  if (intelStepUi.details) {
+    const labels = intelStepUi.details.querySelectorAll("dt");
+    const values = intelStepUi.details.querySelectorAll("dd");
+    for (const label of labels) {
+      stepOneTargets.push(createStepTextTarget(label, label.textContent || ""));
+    }
+    for (const value of values) {
+      stepOneTargets.push(createStepTextTarget(value, value.textContent || ""));
+    }
+  }
+
+  stepOneTargets.push(
+    createStepTextTarget(intelStepUi.objectiveHeading, intelStepUi.objectiveHeading?.textContent || ""),
+    createStepTextTarget(intelUi.objective, intelUi.objective?.textContent || "")
+  );
+
+  const stepTwoTargets = [
+    createStepTextTarget(intelUi.title, intelUi.title?.textContent || ""),
+    createStepTextTarget(intelUi.summary, intelUi.summary?.textContent || ""),
+    createStepTextTarget(intelStepUi.achievementsHeading, intelStepUi.achievementsHeading?.textContent || ""),
+  ];
+
+  if (intelUi.achievements) {
+    const achievementItems = intelUi.achievements.querySelectorAll("li");
+    for (const item of achievementItems) {
+      stepTwoTargets.push(createStepTextTarget(item, item.textContent || ""));
+    }
+  }
+
+  stepTwoTargets.push(...captureAttributionTargets(intelUi.source));
+  stepTwoTargets.push(...captureAttributionTargets(intelUi.imageSource));
+
+  const stepThreeTargets = [
+    createStepTextTarget(intelUi.title, intelUi.title?.textContent || ""),
+    createStepTextTarget(intelUi.summary, intelUi.summary?.textContent || ""),
+    createStepTextTarget(intelStepUi.quizHeading, intelStepUi.quizHeading?.textContent || ""),
+    createStepTextTarget(intelUi.quizPrompt, intelUi.quizPrompt?.textContent || ""),
+    createStepTextTarget(intelUi.quizFeedback, intelUi.quizFeedback?.textContent || ""),
+  ];
+
+  if (intelUi.quizOptions) {
+    const optionButtons = intelUi.quizOptions.querySelectorAll("button");
+    for (const button of optionButtons) {
+      stepThreeTargets.push(createStepTextTarget(button, button.textContent || ""));
+    }
+  }
+
+  intelStepSourceTargets = [stepOneTargets, stepTwoTargets, stepThreeTargets];
+}
+
+function runIntelTypewriter(stepIndex, targets, options = {}) {
+  cancelIntelTypewriter();
+
+  const controller = {
+    sessionToken: intelModalSessionToken,
+    stepIndex,
+    timeoutIds: new Set(),
+    cancelled: false,
+  };
+  intelTypewriterController = controller;
+
+  const typeTargets = Array.isArray(targets) ? targets : [];
+  if (typeof options.onStart === "function") {
+    options.onStart();
+  }
+
+  for (const target of typeTargets) {
+    target.write("");
+  }
+
+  function animateTarget(targetIndex, charIndex) {
+    if (!intelTypewriterController || controller.cancelled || intelTypewriterController !== controller) return;
+    if (controller.sessionToken !== intelModalSessionToken || controller.stepIndex !== intelModalCurrentStep) return;
+
+    if (targetIndex >= typeTargets.length) {
+      if (typeof options.onComplete === "function") {
+        options.onComplete();
+      }
+      return;
+    }
+
+    const target = typeTargets[targetIndex];
+    const sourceText = typeof target.sourceText === "string" ? target.sourceText : "";
+
+    if (charIndex > sourceText.length) {
+      scheduleTypewriter(controller, () => animateTarget(targetIndex + 1, 0), TYPEWRITER_MEDIUM_MS);
+      return;
+    }
+
+    target.write(sourceText.slice(0, charIndex));
+    scheduleTypewriter(controller, () => animateTarget(targetIndex, charIndex + 1), TYPEWRITER_MEDIUM_MS);
+  }
+
+  animateTarget(0, 0);
+}
+
+function animateStepText(stepIndex) {
+  const targets = Array.isArray(intelStepSourceTargets[stepIndex]) ? intelStepSourceTargets[stepIndex] : [];
+  runIntelTypewriter(stepIndex, targets, {
+    onStart() {
+      if (stepIndex === 2) {
+        setQuizOptionsDisabled(true);
+      }
+    },
+    onComplete() {
+      if (stepIndex === 2) {
+        setQuizOptionsDisabled(false);
+      }
+    },
+  });
+}
+
+function animateQuizFeedbackText(message) {
+  if (!intelUi.quizFeedback) return;
+  const sourceText = typeof message === "string" ? message : "";
+  const feedbackTarget = createStepTextTarget(intelUi.quizFeedback, sourceText);
+  runIntelTypewriter(2, [feedbackTarget]);
+}
+
+function showIntelStep(stepIndex) {
+  const safeStepIndex = Math.max(0, Math.min(INTEL_MODAL_STEP_COUNT - 1, stepIndex));
+  intelModalCurrentStep = safeStepIndex;
+  setStepVisibility(safeStepIndex);
+  setStepNavigationState();
+  animateStepText(safeStepIndex);
+}
+
+function bindIntelStepUi() {
+  if (!intelStepUi.content || intelStepUi.nav) return;
+
+  intelStepUi.objectiveHeading = intelUi.objective?.previousElementSibling;
+  intelStepUi.achievementsHeading = intelUi.achievements?.previousElementSibling;
+  intelStepUi.quizHeading = intelUi.quizPrompt?.previousElementSibling;
+
+  const nav = document.createElement("div");
+  nav.className = "intel-modal__step-nav";
+
+  const back = document.createElement("button");
+  back.type = "button";
+  back.className = "intel-modal__step-nav-btn";
+  back.textContent = "Back";
+  back.addEventListener("click", () => {
+    showIntelStep(intelModalCurrentStep - 1);
+  });
+
+  const status = document.createElement("p");
+  status.className = "intel-modal__step-status";
+
+  const next = document.createElement("button");
+  next.type = "button";
+  next.className = "intel-modal__step-nav-btn";
+  next.textContent = "Next";
+  next.addEventListener("click", () => {
+    showIntelStep(intelModalCurrentStep + 1);
+  });
+
+  nav.append(back, status, next);
+  intelStepUi.content.append(nav);
+
+  intelStepUi.nav = nav;
+  intelStepUi.back = back;
+  intelStepUi.next = next;
+  intelStepUi.status = status;
 }
 
 function spawnDust(amount) {
@@ -1050,6 +1332,8 @@ function maybeShowDiscoveryIntel(discoveryNode) {
 }
 
 function openIntelModal(name, discoveryNode = null) {
+  intelModalSessionToken += 1;
+  cancelIntelTypewriter();
   if (autoCloseIntelTimer !== null) {
     window.clearTimeout(autoCloseIntelTimer);
     autoCloseIntelTimer = null;
@@ -1104,6 +1388,9 @@ function openIntelModal(name, discoveryNode = null) {
 
   renderAttribution(intelUi.source, "Source", intel.source);
   renderAttribution(intelUi.imageSource, "Image Source", intel.imageSource);
+
+  captureIntelStepSourceTargets();
+  showIntelStep(0);
 
   setIntelModalOpen(true);
   interactPressed = false;
@@ -1215,7 +1502,19 @@ function buildQuizOptions(correctYear, roverName) {
 }
 
 function setQuizFeedback(message, status) {
-  intelUi.quizFeedback.textContent = message;
+  const feedbackText = typeof message === "string" ? message : "";
+  const shouldAnimateFeedback =
+    feedbackText.length > 0 &&
+    intelOpen &&
+    intelModalCurrentStep === 2 &&
+    intelStepUi.quizSection &&
+    intelStepUi.quizSection.hidden === false;
+
+  if (shouldAnimateFeedback) {
+    animateQuizFeedbackText(feedbackText);
+  } else {
+    intelUi.quizFeedback.textContent = feedbackText;
+  }
   intelUi.quizFeedback.className = "intel-modal__quiz-feedback";
   if (status === "error") {
     intelUi.quizFeedback.classList.add("intel-modal__quiz-feedback--error");
@@ -1405,6 +1704,8 @@ function renderIntelImage(intel) {
 }
 
 function closeIntelModal() {
+  intelModalSessionToken += 1;
+  cancelIntelTypewriter();
   if (autoCloseIntelTimer !== null) {
     window.clearTimeout(autoCloseIntelTimer);
     autoCloseIntelTimer = null;
@@ -1444,6 +1745,7 @@ async function loadRoverIntel() {
 }
 
 function bindIntelModalEvents() {
+  bindIntelStepUi();
   intelUi.close.addEventListener("click", closeIntelModal);
   intelUi.root.addEventListener("click", (event) => {
     const target = event.target;

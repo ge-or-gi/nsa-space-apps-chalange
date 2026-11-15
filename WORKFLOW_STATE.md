@@ -21,6 +21,7 @@
 - New bug-fix request: after local revert via `git checkout .`, remove `imageFallback` from rover intel modal because it is visibly showing.
 - New change request: move the game HUD into the canvas and make it more modern.
 - New gameplay-learning request: make rover discoveries appear one-by-one in chronological mission order, and show rover names clearly so players learn which rover came first/second/etc.
+- New change request: rover intel modal content is shown in 3 steps (last step is answering the question); when info appears on each step, it should animate as if coming from a typewriter effect.
 
 ## Clarified Scope
 - Build a Mars-themed rover survival mini-game prototype in HTML + JavaScript.
@@ -198,8 +199,36 @@
 - Discovery visibility is single-step: only next required entry is visible; later entries stay hidden.
 - Name/order labels must appear on-map, in HUD objective text, and in modal context.
 - No out-of-order hint text/UI should appear.
+- Modal intel currently has a 3-step flow (final step is quiz answer).
+- New request adds a typewriter-style reveal animation when step info is shown.
+- Keep existing modal/quiz flow unchanged unless clarified otherwise.
+- Typewriter request is fully clarified:
+  - Animate rover content + quiz content text in each of the 3 modal steps.
+  - Final quiz step also animates answer option text.
+  - No skip/fast-forward interaction.
+  - Medium typing speed.
+  - Re-run animation every time user revisits a step.
+- Clarified scope for this pass (typewriter UX):
+  - Apply typewriter reveal to rover content + quiz content text shown in each modal step (including quiz options on step 3).
+  - Exclude modal step-navigation chrome text (`Back`, `Next`, `Step N of 3`) from typewriter animation scope.
+  - Preserve existing 3-step flow and quiz correctness gating; this is a presentation/timing change only.
+  - Re-trigger animation whenever a step is shown again.
 
 ## Plan
+- Modal typewriter animation pass (latest):
+  - In `game.js`, add a reusable typewriter renderer for modal step text that can animate plain text across multiple DOM targets (titles, labels, body, quiz option labels) at medium speed.
+  - Wire step transitions in the existing 3-step intel modal flow so each step starts a fresh animation run and previous timers are safely cancelled.
+  - Ensure final quiz step animates option labels before user answer interaction is enabled, while preserving existing quiz correctness/retry logic.
+  - Enforce non-skippable behavior (no click/key shortcut to reveal instantly).
+  - On step revisit, restart animation from the beginning for that step.
+  - Keep modal pause/resume, close paths, chronology gating, and discovery progression unchanged.
+  - Add/adjust minimal CSS only if needed for readability while text is progressively rendered.
+  - Debater hardening (approved into plan):
+    - inventory all per-step text targets (headings/labels/body + step-3 option labels) and animate from immutable source text;
+    - use one cancellable/tokenized animation controller; cancel on step change, close, auto-close, and reopen to prevent stale callbacks;
+    - preserve existing DOM/link/event hooks (no `innerHTML` rebuild that drops handlers/attribution links);
+    - keep quiz options non-actionable until label animation completes;
+    - replay animation from the beginning on every step revisit.
 - Build a single-page browser game using HTML5 Canvas + vanilla JavaScript for fastest prototype delivery.
 - Implement player rover controls (WASD/arrow keys for movement, mouse for aiming; `E` for interaction; click for action).
 - Implement wave system: enemies spawn per wave with increasing difficulty; player has health and can lose.
@@ -520,6 +549,18 @@
   - Validate with `node --check game.js`, JSON parse/schema checks for all six `videoUrl` fields, and a focused browser/manual test: Sojourner is image then video at 0:00, each other rover has no empty media panel, invalid URL is inert, close stops playback, and wrong/correct quiz behavior remains unchanged.
 - API behavior verified against YouTube’s official IFrame player parameters documentation: the canonical form is `https://www.youtube.com/embed/VIDEO_ID`; `start` controls an offset, so omitting it starts at the beginning; autoplay defaults to `0`; embeds require at least a 200×200 viewport (16:9 sizing should be large enough for the modal). `modestbranding` is deprecated/has no effect, and `rel=0` only limits related videos to the same channel rather than disabling them.
 - Image-fallback removal review: approve the three-file scope (`index.html`, `style.css`, `game.js`) as the simplest correct approach; no data, video, quiz, or gameplay changes are needed.
+
+- Modal typewriter review (latest request):
+  - Verdict: revise before implementation; the proposed scope is minimal and directionally correct, but timer ownership, the complete text-target inventory, and interaction gating need to be explicit.
+  - Keep the change limited to `game.js` and only necessary `style.css`; do not alter rover data, progression, quiz answer derivation, pause state, or modal close semantics.
+  - The typewriter must render every visible textual target for each step, including step headings/labels/body text and step-3 option labels. Preserve existing links and DOM hooks; do not rebuild modal HTML with `innerHTML` in a way that drops attribution hrefs or event listeners.
+  - Use one cancellable animation controller/token for the currently displayed step. Cancel it on step change, modal close, and a new modal open; stale callbacks must not append characters to a later step or a reopened modal.
+  - Re-render the step from its original complete text on every visit, then start a fresh run. Do not use already-mutated DOM text as the source, or revisits may only animate a suffix/empty string.
+  - “Non-skippable” must mean no click, key, or repeated step action reveals the remaining text instantly. Quiz option buttons must remain disabled/non-actionable until all option labels have completed; correctness must still be decided by the existing answer value, not by displayed text.
+  - Preserve the existing modal pause/close paths (button, backdrop, keyboard), auto-close success timer, retry behavior, and `intelOpen` lifecycle. Closing during an animation must cancel timers and resume exactly once; reopening must not inherit old timers or completion state.
+  - Avoid changing step navigation semantics unless required by the existing flow. If navigation is allowed during typing, it must cancel the prior run cleanly; if the current UI requires completion before Next, make that gating explicit and test it as a presentation-only timing rule.
+  - Medium speed should be a named constant with a documented/obvious interval, not scattered delays. Avoid one timer per character without cleanup; a single scheduled callback/chain per target or a tracked controller is acceptable for this small modal.
+  - Context7 is unavailable in this environment. No new library/API behavior is introduced; fallback references are existing DOM timer/event semantics and the project’s current modal implementation. Verify behavior with browser checks rather than relying on unsupported assumptions.
 - Required adjustment: “remove fallback completely” must include the fallback DOM node, its CSS, the `imageFallback` reference, and every fallback text/toggle branch. The remaining image path should hide/remove `intelImage` when `imageUrl` is absent or fails, rather than displaying replacement UI.
 - Required edge-case handling: clear/reset image `onload`/`onerror` handlers and remove the prior `src` when no URL is available, so a failed or previous rover image cannot remain visible while another modal entry is rendered. Preserve the existing image element and valid-image rendering.
 - Validation should include `node --check game.js`, a repository search proving no `imageFallback` references remain, and a focused browser check for valid image display, missing/failed image with no fallback panel/text, modal close/backdrop/keyboard behavior, pause/resume, and quiz retries/correct-answer retrieval.
@@ -529,6 +570,16 @@
   - Acceptance Criteria: require the canonical beginning-of-video embed, no iframe for missing/invalid URLs, playback stops when modal closes, and explicit verification that image-first stacking, pause/resume, close paths, and quiz gating remain unchanged.
 
 ## Files To Change
+- Modal typewriter quiz-feedback follow-up (implemented this pass):
+  - `game.js` (added `#intelQuizFeedback` to step-3 immutable source-target capture; routed wrong/correct feedback updates through existing tokenized/cancellable typewriter lifecycle while keeping navigation chrome text excluded)
+  - `WORKFLOW_STATE.md` (implementor notes/tests/status/next-agent handoff updates)
+- Modal typewriter UX pass (implemented this pass):
+  - `game.js` (3-step modal presentation flow + medium-speed typewriter animation for all per-step text targets, including step-3 quiz option labels; single cancellable/tokenized animation controller; timer cleanup on step change/close/auto-close/reopen; quiz-option disabled gating until label animation completes)
+  - `WORKFLOW_STATE.md` (implementor notes/tests/status/next-agent handoff updates)
+- Modal typewriter animation pass (planned):
+  - `game.js` (typewriter engine, step-render orchestration, timer lifecycle/cleanup, quiz-option animation gating)
+  - `style.css` (only if minor presentation tweaks are required for animated text readability)
+  - `WORKFLOW_STATE.md` (planner/debate/handoff updates)
 - Rover chronology-learning pass (implemented this pass):
   - `game.js` (launch-date sequence built from loaded rover data; stable same-date tie handling by source order; active-target-only draw/interaction/prompt; shared `#N Name` helper wired to map label + HUD objective + modal title/context)
   - `WORKFLOW_STATE.md` (implementor status/notes/tests/next-agent handoff updates)
@@ -653,6 +704,39 @@
   - `opencode.json` (`agent.debater.model` set to `github-copilot/gpt-5.6-luna`)
 
 ## Current Status
+- Implementor follow-up complete for reviewer-requested modal typewriter fix:
+  - `#intelQuizFeedback` is now captured in step-3 immutable source-target inventory and included in typewriter coverage.
+  - Wrong-answer and success feedback updates now render through the same tokenized/cancellable typewriter lifecycle used by modal steps.
+  - Navigation chrome text remains intentionally excluded from animation scope (`Back`, `Next`, `Step N of 3`) per latest user clarification.
+  - Quiz semantics/progression remain unchanged (retry behavior, correctness gating, auto-close timing, chronology gating).
+  - Timer/session cancellation behavior preserved for step change/close/reopen/auto-close paths.
+  - Ready for reviewer verification.
+- Modal typewriter UX review found follow-up work required before tester:
+  - Rover intel modal now runs in 3 steps; text animation replays whenever a step is revisited.
+  - Typewriter animation covers all textual targets per step, including step-3 quiz option labels.
+  - Medium typing speed applied via a single constant.
+  - Non-skippable reveal enforced: no fast-forward path, and quiz options are disabled until their labels finish animating.
+  - Single cancellable/tokenized animation lifecycle added; timers are cancelled on step change, close, auto-close, and reopen.
+  - Stale callback writes are blocked by controller/session token checks.
+   - Existing modal close paths (button/backdrop/keyboard), pause/resume, quiz retries/correctness gating, chronology progression, and success auto-close behavior are preserved.
+   - Static syntax and JSON checks pass, but complete rover+quiz text coverage is not yet demonstrated because quiz feedback is not animated.
+ - User clarified scope boundary after review:
+   - Animate only rover content + quiz content text.
+   - Do not animate navigation chrome text (`Back`, `Next`, `Step N of 3`).
+- Modal typewriter request is clarified and ready for debate review:
+  - Animate all text in all 3 modal steps.
+  - Include quiz option text in typewriter animation.
+  - Medium speed.
+  - Non-skippable.
+  - Replay animation when revisiting steps.
+  - Keep existing pause/resume, close paths, quiz retry/correctness gating, and success auto-close behavior unchanged.
+- Modal typewriter plan reviewed: revise before implementation.
+- Required hardening recorded: explicit all-target inventory, source-text preservation, cancellable/tokenized timer lifecycle across step changes/close/reopen, quiz-option interaction disabled until reveal completion, and regression checks for pause/close and correctness gating.
+- Context7 was unavailable; no external library/API behavior was introduced, so browser/manual validation is required.
+- Phase 4 handoff ready:
+  - Debater feedback accepted and merged into the plan.
+  - Scope/constraints/acceptance criteria are clear and non-blocking.
+  - Ready for implementor to execute approved typewriter plan.
 - Rover chronology-learning implementation complete (this pass):
   - Discovery sequence now comes from loaded rover intel entries sorted by launch date ascending.
   - Exact same-date ties are deterministic via source-order fallback (Perseverance stays before Ingenuity for 2020-07-30 tie).
@@ -854,6 +938,15 @@
   - No audio.
   - Controls unchanged.
 - Phase 3 plan updated and ready for debater review.
+- Phase 1 (Clarify) reopened for new modal UX request:
+  - Apply a typewriter-style text reveal when intel content is shown in each of the modal’s 3 steps.
+  - Last modal step remains the quiz/answer step.
+  - User confirmed: animate all text, no skip, medium speed, animate quiz options, and replay animation on step revisit.
+- Phase 2 complete for modal typewriter UX request:
+  - Scope is fully clarified with no blocking questions.
+  - This pass is presentation/timing only; existing quiz correctness gating and modal pause/resume/close behavior must remain unchanged.
+- Phase 3 complete for modal typewriter UX request:
+  - Plan prepared for debater review prior to implementor handoff.
 
 ## Acceptance Criteria
 - Browser-playable mini-game built with HTML + JavaScript.
@@ -924,16 +1017,70 @@
 - In-canvas HUD follows playful NASA/kid-friendly modern styling using corner cards and an objective panel.
 - Modal visuals are modernized in this same pass without changing modal data fields or behavior semantics.
 - Gameplay mechanics, controls, pause/resume logic, and quiz/retrieval gating remain unchanged.
+- Rover intel modal reveals text using a medium-speed typewriter effect across all 3 steps.
+- Typewriter effect applies to rover content + quiz content text in each step, including quiz answer option labels and quiz feedback text.
+- Typewriter scope excludes modal step-navigation chrome text (`Back`, `Next`, `Step N of 3`).
+- Typewriter effect cannot be skipped/fast-forwarded by user actions.
+- Revisiting any modal step replays that step’s typewriter animation from the start.
+- Existing modal/quiz behavior remains unchanged (pause/resume, close paths, retries, correctness gating, success auto-close).
 
 ## Next Agent
-- `reviewer` — validate chronology-learning implementation:
-  - confirm launch-date ordering includes Ingenuity and same-date tie behavior is deterministic by source order;
-  - confirm only active target is rendered/prompted/interactable and later targets stay fully hidden;
-  - confirm `#N Name` consistency in map label, HUD objective, and modal title/context;
-  - confirm wrong-answer retries do not advance and correct answer advances once;
-  - confirm modal pause/resume/close paths and controls/mechanics remain unchanged.
+- `reviewer` — please review the modal typewriter UX implementation in `game.js`:
+  - confirm reviewer-requested follow-up is now complete:
+    - `#intelQuizFeedback` is included in step-3 immutable source target coverage;
+    - wrong-answer (`Not quite. Try again!`) and success feedback messages animate via the typewriter lifecycle while step 3 is visible;
+    - nav chrome text (`Back`, `Next`, `Step N of 3`) remains non-animated.
+  - verify all-step text-target coverage inventory is complete:
+    - step 1: title, summary, detail labels/values, mission objective heading/body;
+    - step 2: title, summary, achievements heading/items, source + image-source attribution text/link labels;
+    - step 3: title, summary, quiz heading/prompt, all quiz option labels, and quiz feedback text.
+  - confirm immutable-source animation behavior (revisit replay from full source text, not mutated DOM leftovers).
+  - confirm one cancellable/tokenized controller lifecycle and timer cleanup on step change, modal close, success auto-close, and reopen.
+  - confirm stale callbacks cannot write into a newer step/session.
+  - confirm DOM/link/event hooks remain intact (no `innerHTML` rebuild side effects).
+  - confirm quiz option buttons remain non-actionable until option-label animation completes.
+  - confirm no regressions in pause/resume, close/backdrop/keyboard paths, quiz retries/correctness gating, chronology gating/progression, and success auto-close.
 
 ## Implementation Notes
+- Implemented reviewer-requested modal typewriter follow-up in `game.js` (minimal scope):
+  - Added `intelUi.quizFeedback` into `captureIntelStepSourceTargets()` step-3 immutable target set so feedback text is part of explicit coverage.
+  - Refactored existing step animation into reusable `runIntelTypewriter(stepIndex, targets, { onStart, onComplete })` while preserving the same single tokenized/cancellable controller lifecycle.
+  - Kept step-3 option-button gating semantics unchanged by moving prior disable/enable behavior into `animateStepText()` callbacks.
+  - Added `animateQuizFeedbackText(message)` and updated `setQuizFeedback()` to animate non-empty feedback text only when modal is open and step 3 is visible; otherwise it safely sets text directly.
+  - Preserved non-animated navigation chrome text and existing quiz semantics (retry/correctness/auto-close/retrieval gating unchanged).
+  - Preserved timer cancellation behavior through existing `cancelIntelTypewriter()` and modal/session guards.
+- Context/API verification note for this follow-up:
+  - Context7 MCP is unavailable in this environment; no new library/framework API was introduced.
+  - Implementation relies on existing DOM/timer behavior already used in the codebase and existing controller lifecycle.
+- Implemented approved modal typewriter UX plan in `game.js` with minimal scope:
+  - Added modal step/typewriter state:
+    - `INTEL_MODAL_STEP_COUNT = 3`, `TYPEWRITER_MEDIUM_MS = 30`.
+    - `intelModalSessionToken`, `intelModalCurrentStep`, `intelStepSourceTargets`, `intelTypewriterController`.
+  - Added one cancellable/tokenized animation lifecycle:
+    - `scheduleTypewriter()`, `cancelIntelTypewriter()`, and controller checks (`sessionToken`, active controller identity, current step guard).
+    - Cancellation wired on step change (`showIntelStep()`), modal close (`closeIntelModal()`), modal reopen (`openIntelModal()`), and success auto-close path via existing close function.
+  - Added explicit 3-step presentation orchestration (no modal HTML rebuild):
+    - `setStepVisibility()`, `setStepNavigationState()`, `bindIntelStepUi()`.
+    - Injected lightweight Back/Next/Step-status controls via DOM API and event listeners (preserving existing modal hooks).
+  - Added complete per-step text-target inventory from immutable source text snapshots:
+    - `captureIntelStepSourceTargets()` + `captureAttributionTargets()` capture original full strings for each step before mutation.
+    - Step 1 targets: title, summary, detail `dt`/`dd`, mission objective heading/body.
+    - Step 2 targets: title, summary, achievements heading/items, source/image-source attribution prefix + link labels.
+    - Step 3 targets: title, summary, quiz heading/prompt, quiz option labels.
+  - Added typewriter renderer:
+    - `animateStepText(stepIndex)` progressively writes each target string at medium speed.
+    - Re-runs from the start whenever a step is revisited.
+  - Non-skippable quiz-option action gating:
+    - `setQuizOptionsDisabled(true/false)` keeps step-3 buttons disabled until option-label animation completes.
+  - Preserved existing behavior:
+    - modal pause/resume lifecycle,
+    - close button/backdrop/keyboard close paths,
+    - success auto-close timer path,
+    - quiz correctness/retry logic,
+    - chronology gating/progression mechanics.
+- Context/API verification note for this pass:
+  - Context7 MCP is unavailable in this environment.
+  - Fallback used: existing project DOM/timer/event semantics and static code-path verification (no new third-party framework/library APIs introduced).
 - Implemented approved rover chronology-learning plan with minimal scope:
   - `game.js`
     - Added sequence state `roverDiscoverySequence` built in `loadRoverIntel()` from JSON entries using `buildRoverDiscoverySequence(entries)`.
@@ -1258,12 +1405,46 @@
   - No external library/framework API behavior was changed; edits are keybinding condition updates + CSS/text revert.
 
 ## Review Findings
-- Reviewer task invocation failed: `Model not found: github-copilot/gpt-5.4`.
-- No reviewer analysis produced yet; needs retry after model config fix.
-- Retry attempt for viewport-fit regression review also failed with same routing error: `Model not found: github-copilot/gpt-5.4`.
-- Reviewer output still pending due to environment model routing issue.
+- Verdict: changes requested before tester.
+- [medium] `game.js:captureIntelStepSourceTargets()` does not capture or animate `#intelQuizFeedback`. This is user-visible step-3 text after wrong/correct answers, so it violates the “all text” requirement. Add it as an immutable target (or route feedback updates through the same controller) without changing retry/correctness behavior.
+- [medium] Dynamically appended step navigation has visible text (`Back`, `Next`, `Step N of 3`) but is not in the typewriter target inventory. Confirm whether navigation chrome is intentionally excluded from “all text”; if not, capture it from immutable source strings and animate it per step while preserving handlers and disabled state.
+- Timer/session implementation is otherwise sound: one tracked controller, cancellation on step change/open/close/auto-close, and controller + session + step guards prevent stale writes. Quiz buttons are disabled until option labels finish, and no `innerHTML` rebuild drops links/listeners.
+- Existing close paths, pause gate, quiz retry/correctness/retrieval gating, chronology helpers, and progression code remain unchanged by inspection.
+- Context7 was unavailable; no new library/API behavior was introduced. Browser runtime validation was unavailable in this CLI-only review.
 
 ## Test Results
+- Modal typewriter quiz-feedback follow-up verification (this pass):
+  - `node --check "game.js"` ✅
+  - Focused static checks ✅
+    - `captureIntelStepSourceTargets()` step-3 inventory now includes `intelUi.quizFeedback`.
+    - `setQuizFeedback()` routes non-empty step-3 visible feedback messages through `animateQuizFeedbackText()`.
+    - Feedback animation uses the existing tokenized/cancellable controller (`runIntelTypewriter` + `cancelIntelTypewriter`) and does not alter quiz answer logic.
+    - Navigation chrome remains explicitly non-animated (`Back`, `Next`, `Step N of 3` still set via `textContent` in nav-state path, not captured as animation targets).
+    - Existing step-3 option disabled/enabled gating remains in place via `animateStepText()` callbacks.
+  - Limitation: browser runtime playtest not executable in this CLI-only environment.
+- Modal typewriter UX verification (this pass):
+  - `node --check "game.js"` ✅
+  - Focused static checks ✅
+    - all-step animation wiring present:
+      - `captureIntelStepSourceTargets()`, `animateStepText()`, `showIntelStep()`, `setStepVisibility()`.
+    - quiz-option animation + gating present:
+      - step-3 option labels captured and animated;
+      - `setQuizOptionsDisabled(true)` at step-3 animation start and `false` on completion.
+    - replay-on-revisit present:
+      - every Back/Next route calls `showIntelStep(...)` → fresh `animateStepText(...)` run.
+    - non-skippable safeguards present:
+      - no fast-forward/reveal-all path; text writes only through progressive `slice` in typewriter callbacks.
+    - timer cleanup/no-overlap/stale-write safeguards present:
+      - `cancelIntelTypewriter()` called on step change/open/close;
+      - `intelModalSessionToken` increment on open/close;
+      - callback guards enforce active controller + matching session/step before writing.
+    - DOM/link/event hook preservation:
+      - no `innerHTML` usage for modal rebuilds; attribution links/buttons preserved as live nodes.
+    - unchanged modal/quiz/progression behavior checks:
+      - existing close paths unchanged (`#intelClose`, backdrop `data-close-intel`, keyboard `Escape`/`Enter`/`Space`);
+      - existing quiz feedback/correctness/auto-close code paths remain in place;
+      - chronology gating helpers untouched.
+  - Limitation: browser runtime playtest not executable in this CLI-only environment.
 - Rover chronology-learning verification (this pass):
   - `node --check "game.js"` ✅
   - `node -e "JSON.parse(require('node:fs').readFileSync('data/rovers.json','utf8')); console.log('rovers.json ok')"` ✅
