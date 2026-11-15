@@ -4,6 +4,12 @@ const GAME_STATE = {
   VICTORY: "victory",
 };
 
+const SANDSTORM_STATE = {
+  NORMAL: "normal",
+  WARNING: "warning",
+  ACTIVE: "active",
+};
+
 const CONFIG = {
   worldWidth: 2200,
   worldHeight: 1500,
@@ -101,6 +107,26 @@ const intelUi = {
 
 const INTEL_MODAL_STEP_COUNT = 3;
 const TYPEWRITER_MEDIUM_MS = 30;
+const VICTORY_LAUNCH_CINEMATIC_DURATION = 5.8;
+const VICTORY_LAUNCH_CAMERA_SHAKE_PX = 8;
+const VICTORY_LAUNCH_ZOOM_MAX = 1.18;
+const VICTORY_LAUNCH_ROCKET_SCALE_MAX = 2;
+const VICTORY_LAUNCH_RISE_DISTANCE = 460;
+// Cadence semantics:
+// - Active storm starts every 7 seconds of active gameplay time.
+// - Each active storm is preceded by a warning phase.
+const SANDSTORM_ACTIVE_CADENCE_SECONDS = 7;
+const SANDSTORM_WARNING_DURATION_SECONDS = 1.6;
+const SANDSTORM_ACTIVE_DURATION_SECONDS = 2.1;
+const SANDSTORM_PLAYER_SPEED_MULTIPLIER = 0.18;
+const SANDSTORM_NORMAL_DURATION_SECONDS = Math.max(
+  0,
+  SANDSTORM_ACTIVE_CADENCE_SECONDS - SANDSTORM_WARNING_DURATION_SECONDS - SANDSTORM_ACTIVE_DURATION_SECONDS
+);
+const SANDSTORM_INITIAL_NORMAL_DURATION_SECONDS = Math.max(
+  0,
+  SANDSTORM_ACTIVE_CADENCE_SECONDS - SANDSTORM_WARNING_DURATION_SECONDS
+);
 
 const intelStepUi = {
   content: document.querySelector(".intel-modal__content"),
@@ -148,6 +174,12 @@ let intelModalSessionToken = 0;
 let intelModalCurrentStep = 0;
 let intelStepSourceTargets = [[], [], []];
 let intelTypewriterController = null;
+let launchCinematic = {
+  started: false,
+  active: false,
+  elapsed: 0,
+  duration: VICTORY_LAUNCH_CINEMATIC_DURATION,
+};
 let renderManifest = { ...DEFAULT_RENDER_MANIFEST };
 let renderAssets = createRenderAssets(renderManifest);
 let hudSnapshot = {
@@ -156,6 +188,10 @@ let hudSnapshot = {
   discoveries: "0/0",
   parts: "0/0",
   objective: "Survive and gather intel.",
+};
+let sandstorm = {
+  phase: SANDSTORM_STATE.NORMAL,
+  phaseRemaining: SANDSTORM_INITIAL_NORMAL_DURATION_SECONDS,
 };
 
 function createSpriteAsset(src) {
@@ -238,6 +274,8 @@ async function loadAssetManifest() {
 }
 
 function resetGame() {
+  resetLaunchCinematic();
+  resetSandstorm();
   state = GAME_STATE.PLAYING;
   player = {
     x: CONFIG.worldWidth * 0.5,
@@ -261,6 +299,7 @@ function resetGame() {
   waveBreakTimer = 0;
   launchTimer = -1;
   seenIntelEntries = new Set();
+  interactPressed = false;
   closeIntelModal();
   rocketZone = {
     x: CONFIG.worldWidth - 220,
@@ -271,6 +310,106 @@ function resetGame() {
 
   spawnWave(wave);
   updateHud();
+}
+
+function resetSandstorm() {
+  sandstorm.phase = SANDSTORM_STATE.NORMAL;
+  sandstorm.phaseRemaining = SANDSTORM_INITIAL_NORMAL_DURATION_SECONDS;
+}
+
+function isSandstormActive() {
+  return sandstorm.phase === SANDSTORM_STATE.ACTIVE;
+}
+
+function advanceSandstorm(dt) {
+  if (!Number.isFinite(dt) || dt <= 0) return;
+
+  let remainingDt = dt;
+  while (remainingDt > 0) {
+    if (sandstorm.phaseRemaining > remainingDt) {
+      sandstorm.phaseRemaining -= remainingDt;
+      return;
+    }
+
+    remainingDt -= sandstorm.phaseRemaining;
+    transitionSandstormPhase();
+  }
+}
+
+function transitionSandstormPhase() {
+  if (sandstorm.phase === SANDSTORM_STATE.NORMAL) {
+    sandstorm.phase = SANDSTORM_STATE.WARNING;
+    sandstorm.phaseRemaining = SANDSTORM_WARNING_DURATION_SECONDS;
+    return;
+  }
+
+  if (sandstorm.phase === SANDSTORM_STATE.WARNING) {
+    sandstorm.phase = SANDSTORM_STATE.ACTIVE;
+    sandstorm.phaseRemaining = SANDSTORM_ACTIVE_DURATION_SECONDS;
+    return;
+  }
+
+  sandstorm.phase = SANDSTORM_STATE.NORMAL;
+  sandstorm.phaseRemaining = SANDSTORM_NORMAL_DURATION_SECONDS;
+}
+
+function resetLaunchCinematic() {
+  launchCinematic.started = false;
+  launchCinematic.active = false;
+  launchCinematic.elapsed = 0;
+  launchCinematic.duration = VICTORY_LAUNCH_CINEMATIC_DURATION;
+}
+
+function startLaunchCinematic() {
+  if (launchCinematic.started) return;
+  launchCinematic.started = true;
+  launchCinematic.active = true;
+  launchCinematic.elapsed = 0;
+  launchCinematic.duration = VICTORY_LAUNCH_CINEMATIC_DURATION;
+}
+
+function updateLaunchCinematic(dt) {
+  if (state !== GAME_STATE.VICTORY) {
+    if (launchCinematic.started || launchCinematic.active || launchCinematic.elapsed > 0) {
+      resetLaunchCinematic();
+    }
+    return;
+  }
+
+  startLaunchCinematic();
+  if (!launchCinematic.active) return;
+
+  launchCinematic.elapsed += Math.max(0, dt);
+  if (launchCinematic.elapsed >= launchCinematic.duration) {
+    launchCinematic.elapsed = launchCinematic.duration;
+    launchCinematic.active = false;
+  }
+}
+
+function getLaunchCinematicProgress() {
+  if (!launchCinematic.started || launchCinematic.duration <= 0) return 0;
+  return Math.max(0, Math.min(1, launchCinematic.elapsed / launchCinematic.duration));
+}
+
+function getLaunchCinematicWorldTransform() {
+  if (state !== GAME_STATE.VICTORY || !launchCinematic.active) {
+    return { active: false, zoom: 1, shakeX: 0, shakeY: 0 };
+  }
+
+  const progress = getLaunchCinematicProgress();
+  const shakeEnvelope = Math.pow(1 - progress, 0.9);
+  const shakeX = Math.sin(launchCinematic.elapsed * 34) * VICTORY_LAUNCH_CAMERA_SHAKE_PX * shakeEnvelope;
+  const shakeY = Math.cos(launchCinematic.elapsed * 39) * VICTORY_LAUNCH_CAMERA_SHAKE_PX * 0.7 * shakeEnvelope;
+  const zoom = 1 + Math.sin(progress * Math.PI) * (VICTORY_LAUNCH_ZOOM_MAX - 1);
+
+  return { active: true, zoom, shakeX, shakeY };
+}
+
+function applyWorldTransform(transform) {
+  if (!transform?.active) return;
+  ctx.translate(canvas.width * 0.5 + transform.shakeX, canvas.height * 0.5 + transform.shakeY);
+  ctx.scale(transform.zoom, transform.zoom);
+  ctx.translate(-canvas.width * 0.5, -canvas.height * 0.5);
 }
 
 function scheduleTypewriter(controller, callback, delay) {
@@ -657,11 +796,19 @@ function allPartsCollected() {
 }
 
 function update(dt) {
+  updateLaunchCinematic(dt);
+
   if (state !== GAME_STATE.PLAYING || intelOpen) {
+    if (state !== GAME_STATE.PLAYING) {
+      resetSandstorm();
+      interactPressed = false;
+    }
     updateCamera();
     updateHud();
     return;
   }
+
+  advanceSandstorm(dt);
 
   updatePlayer(dt);
   updateBullets(dt);
@@ -670,7 +817,9 @@ function update(dt) {
   updateWaveFlow(dt);
 
   if (interactPressed) {
-    handleInteraction();
+    if (!isSandstormActive()) {
+      handleInteraction();
+    }
     interactPressed = false;
   }
 
@@ -704,8 +853,9 @@ function updatePlayer(dt) {
     moveY /= mag;
   }
 
-  player.x += moveX * player.speed * dt;
-  player.y += moveY * player.speed * dt;
+  const movementMultiplier = isSandstormActive() ? SANDSTORM_PLAYER_SPEED_MULTIPLIER : 1;
+  player.x += moveX * player.speed * movementMultiplier * dt;
+  player.y += moveY * player.speed * movementMultiplier * dt;
 
   player.x = Math.max(player.radius, Math.min(CONFIG.worldWidth - player.radius, player.x));
   player.y = Math.max(player.radius, Math.min(CONFIG.worldHeight - player.radius, player.y));
@@ -716,7 +866,7 @@ function updatePlayer(dt) {
   if (player.fireCooldown > 0) player.fireCooldown -= dt;
   if (player.damageCooldown > 0) player.damageCooldown -= dt;
 
-  if (mouse.down && player.fireCooldown <= 0) {
+  if (!isSandstormActive() && mouse.down && player.fireCooldown <= 0) {
     shoot();
     player.fireCooldown = 0.18;
   }
@@ -804,6 +954,8 @@ function updateWaveFlow(dt) {
 }
 
 function handleInteraction() {
+  if (isSandstormActive()) return;
+
   const activeDiscovery = getActiveDiscoveryNode();
   if (activeDiscovery && distance(player.x, player.y, activeDiscovery.x, activeDiscovery.y) <= CONFIG.interactionRange) {
     maybeShowDiscoveryIntel(activeDiscovery);
@@ -842,6 +994,10 @@ function screenToWorld(x, y) {
 }
 
 function draw() {
+  const worldTransform = getLaunchCinematicWorldTransform();
+
+  ctx.save();
+  applyWorldTransform(worldTransform);
   drawTerrain();
   drawRocketZone();
   drawDiscoveries();
@@ -849,9 +1005,47 @@ function draw() {
   drawEnemies();
   drawBullets();
   drawPlayer();
+  ctx.restore();
+
   drawHudOverlay();
   drawInteractionPrompt();
+  drawSandstormOverlay();
   drawStateOverlay();
+}
+
+function drawSandstormOverlay() {
+  if (state !== GAME_STATE.PLAYING || intelOpen) return;
+  if (sandstorm.phase === SANDSTORM_STATE.NORMAL) return;
+
+  ctx.save();
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+
+  const isWarning = sandstorm.phase === SANDSTORM_STATE.WARNING;
+  const message = isWarning ? "Sandstorm warning! Brace now!" : "Sandstorm active! Actions blocked.";
+
+  if (!isWarning) {
+    ctx.fillStyle = "rgba(209, 162, 88, 0.16)";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+  }
+
+  const panelWidth = Math.min(460, Math.max(260, Math.round(canvas.width * 0.52)));
+  const panelHeight = 42;
+  const panelX = (canvas.width - panelWidth) * 0.5;
+  const panelY = 14;
+
+  ctx.fillStyle = isWarning ? "rgba(33, 24, 50, 0.86)" : "rgba(77, 50, 23, 0.88)";
+  roundRectPath(panelX, panelY, panelWidth, panelHeight, 12);
+  ctx.fill();
+  ctx.strokeStyle = isWarning ? "rgba(126, 240, 255, 0.9)" : "rgba(255, 219, 145, 0.9)";
+  ctx.lineWidth = 1.6;
+  ctx.stroke();
+
+  ctx.fillStyle = "#f9fbff";
+  ctx.font = "800 16px Inter, Arial";
+  ctx.textAlign = "center";
+  ctx.fillText(message, canvas.width * 0.5, panelY + 27);
+  ctx.textAlign = "start";
+  ctx.restore();
 }
 
 function drawHudOverlay() {
@@ -1244,14 +1438,30 @@ function drawRocketZone() {
   ctx.stroke();
 
   if (rocketZone.assembled) {
-    const flame = launchTimer > 0 ? 10 + Math.sin(launchTimer * 15) * 5 : 0;
+    const launchProgress = getLaunchCinematicProgress();
+    const cinematicScale = state === GAME_STATE.VICTORY
+      ? 1 + (VICTORY_LAUNCH_ROCKET_SCALE_MAX - 1) * Math.sin(launchProgress * Math.PI * 0.5)
+      : 1;
+    const rocketWidth = 20 * cinematicScale;
+    const rocketHeight = 40 * cinematicScale;
+    const riseDistance = state === GAME_STATE.VICTORY
+      ? Math.pow(launchProgress, 1.15) * VICTORY_LAUNCH_RISE_DISTANCE
+      : 0;
+    const rocketX = p.x;
+    const rocketY = p.y - riseDistance;
+    const flame = state === GAME_STATE.VICTORY
+      ? 12 + Math.sin(launchCinematic.elapsed * 24) * 6 + launchProgress * 20
+      : launchTimer > 0
+        ? 10 + Math.sin(launchTimer * 15) * 5
+        : 0;
+
     ctx.fillStyle = "#ecf6ff";
-    ctx.fillRect(p.x - 10, p.y - 40, 20, 40);
+    ctx.fillRect(rocketX - rocketWidth * 0.5, rocketY - rocketHeight, rocketWidth, rocketHeight);
     ctx.fillStyle = "#ffbd64";
     ctx.beginPath();
-    ctx.moveTo(p.x - 8, p.y);
-    ctx.lineTo(p.x + 8, p.y);
-    ctx.lineTo(p.x, p.y + flame + 12);
+    ctx.moveTo(rocketX - rocketWidth * 0.4, rocketY);
+    ctx.lineTo(rocketX + rocketWidth * 0.4, rocketY);
+    ctx.lineTo(rocketX, rocketY + flame + 12);
     ctx.closePath();
     ctx.fill();
   }
@@ -1259,6 +1469,15 @@ function drawRocketZone() {
 
 function drawInteractionPrompt() {
   if (state !== GAME_STATE.PLAYING || intelOpen) return;
+
+  if (isSandstormActive()) {
+    ctx.fillStyle = "rgba(44, 25, 8, 0.78)";
+    ctx.fillRect(12, canvas.height - 47, 388, 34);
+    ctx.fillStyle = "#ffe6bf";
+    ctx.font = "700 16px Inter, Arial";
+    ctx.fillText("Actions blocked during sandstorm", 20, canvas.height - 24);
+    return;
+  }
 
   const nearby = getNearbyInteractable();
   if (!nearby) return;
@@ -1293,6 +1512,7 @@ function getNearbyInteractable() {
 
 function drawStateOverlay() {
   if (state === GAME_STATE.PLAYING) return;
+  if (state === GAME_STATE.VICTORY && launchCinematic.active) return;
 
   ctx.fillStyle = "rgba(6, 10, 28, 0.62)";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -1769,7 +1989,9 @@ window.addEventListener("keydown", (event) => {
   keys[key] = true;
 
   if (key === "e" && state === GAME_STATE.PLAYING) {
-    interactPressed = true;
+    if (!isSandstormActive()) {
+      interactPressed = true;
+    }
   }
 
   if (key === "r" && state !== GAME_STATE.PLAYING) {

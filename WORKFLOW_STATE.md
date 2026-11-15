@@ -22,6 +22,14 @@
 - New change request: move the game HUD into the canvas and make it more modern.
 - New gameplay-learning request: make rover discoveries appear one-by-one in chronological mission order, and show rover names clearly so players learn which rover came first/second/etc.
 - New change request: rover intel modal content is shown in 3 steps (last step is answering the question); when info appears on each step, it should animate as if coming from a typewriter effect.
+- New visual request: make the rocket look more realistic and super big when it flies out of the screen.
+- New gameplay request: add a sandstorm obstacle every 7 seconds that blocks player movement.
+- Clarification received for sandstorm request:
+  - Movement block applies only while storm is actively passing.
+  - Player should be heavily slowed (not fully frozen).
+  - Effect applies to player only (enemies unaffected).
+  - During storm, all player actions are blocked.
+  - Show warning before each storm.
 
 ## Clarified Scope
 - Build a Mars-themed rover survival mini-game prototype in HTML + JavaScript.
@@ -213,8 +221,53 @@
   - Exclude modal step-navigation chrome text (`Back`, `Next`, `Step N of 3`) from typewriter animation scope.
   - Preserve existing 3-step flow and quiz correctness gating; this is a presentation/timing change only.
   - Re-trigger animation whenever a step is shown again.
+- Clarified scope for new rocket cinematic request:
+  - Apply only to the final/victory launch animation.
+  - Make rocket appear ~2x bigger during launch.
+  - Add camera shake + cinematic zoom effects.
+  - Make launch sequence longer for cinematic feel.
+  - Keep pre-launch rocket behavior unchanged.
+- New request added (pending clarification):
+  - Add periodic sandstorm obstacle every 7 seconds.
+  - Sandstorm should block player movement.
+- Clarified scope for sandstorm obstacle request:
+  - Storm cadence: every 7 seconds.
+  - Player movement effect: heavily slowed only while storm is passing.
+  - Player actions during storm: all blocked.
+  - Enemy behavior: unchanged.
+  - UX requirement: warning before each storm.
 
 ## Plan
+- Sandstorm obstacle pass (latest):
+  - In `game.js`, add a deterministic storm cycle on game-loop time with three states: normal, pre-storm warning, and active passing storm.
+  - Trigger storms every 7 seconds, show warning immediately before active phase, then return to normal.
+  - During active storm only:
+    - heavily slow player movement,
+    - block all player actions (movement-driven actions, firing, and interaction input handling),
+    - keep enemy behavior unchanged.
+  - Render clear in-canvas warning/active-storm messaging via existing overlay/HUD status path.
+  - Ensure storm timing pauses correctly with existing pause gates (modal/game states) and resets cleanly on restart.
+  - Keep scope minimal to `game.js`; avoid changes to modal/quiz/chronology/rocket cinematic systems.
+  - Validate with `node --check game.js` and focused checks for cadence, warning visibility, player-only impact, action blocking, and reset behavior.
+  - Debater hardening (approved into plan):
+    - use explicit `normal`/`warning`/`active` state machine with constants for cycle/warning/active durations;
+    - define and document exact 7-second cadence interpretation to avoid drift/double-trigger;
+    - advance timers only when `state === PLAYING` and modal is closed; freeze/resume phase exactly on modal pause;
+    - block action entry points (`fire` + interaction handling) during active storm, including held/queued input effects;
+    - keep enemy behavior/waves/projectiles unchanged;
+    - reset storm phase/timers/overlays/action-block side effects on restart and non-playing states.
+- Rocket cinematic launch pass (latest):
+  - In `game.js`, isolate final launch/victory animation rendering/timing path and add launch-cinematic state values without changing pre-launch game flow.
+  - Add a smooth rocket scale curve that reaches ~2x size during takeoff and exits the screen.
+  - Add camera shake + temporary zoom during final launch sequence, then cleanly reset transforms after cinematic pass.
+  - Extend launch sequence duration to improve cinematic feel while preserving win-state semantics.
+  - Keep controls, combat/waves, discovery chronology, and quiz progression unchanged.
+  - Validate with `node --check game.js` and focused checks for launch-only visual impact + no HUD/UI transform leakage.
+  - Debater hardening (approved into plan):
+    - add explicit idempotent cinematic state guards (started/active/elapsed/duration) to prevent effect restarts;
+    - scope all shake/zoom transforms to bounded world-render pass with guaranteed cleanup (`save`/`restore` + transform reset before HUD/overlays);
+    - ensure restart/game-over/non-victory paths clear cinematic state and do not inherit launch transforms;
+    - treat ~2x size as relative to current launch render baseline only (no collision/mechanics changes).
 - Modal typewriter animation pass (latest):
   - In `game.js`, add a reusable typewriter renderer for modal step text that can animate plain text across multiple DOM targets (titles, labels, body, quiz option labels) at medium speed.
   - Wire step transitions in the existing 3-step intel modal flow so each step starts a fresh animation run and previous timers are safely cancelled.
@@ -402,7 +455,28 @@
 - Context/API verification for launch-date sequencing:
   - MDN `Date.parse()` returns a timestamp or `NaN`, but parsing non-standard date strings can be inconsistent across engines.
   - For stable ordering, implementation should prefer explicit/normalized launch-date parsing with deterministic fallback handling.
-  - Context7 MCP is unavailable in this environment; MDN used as authoritative fallback.
+- Context7 MCP is unavailable in this environment; MDN used as authoritative fallback.
+
+## Debate Notes
+- Sandstorm review:
+  - Verdict: revise before implementation; the proposed location and file scope are appropriate, but the timing/state contract is not yet precise enough for safe implementation.
+  - Keep the change in `game.js` only. No new dependency or change to modal, quiz, chronology, victory, or game-over architecture is needed.
+  - Define explicit storm phase state and durations: normal, warning, and active. “Every 7 seconds” must specify whether the seven-second interval is measured from the prior storm’s start/end and whether warning time is included; use one monotonic game-time accumulator and document the chosen cadence so storms cannot drift or double-trigger.
+  - Advance storm time only inside the existing `state === PLAYING && !intelOpen` simulation gate. Opening the rover modal must freeze the phase and its remaining timer; closing it must resume the same phase, including an already-active storm. Game-over, victory, and the rocket launch countdown must not advance or create storms.
+  - During active phase, apply a single movement-speed multiplier in `updatePlayer` (not a permanent mutation of `player.speed`) and reject gameplay actions at their entry points: firing/shooting and `handleInteraction`/`E`. Preserve `R` restart in terminal states and modal close/navigation behavior. Decide explicitly that existing bullets and enemy updates continue, so enemies remain unaffected and already-fired bullets are not silently deleted.
+  - Reset all storm state and pending input/action flags in `resetGame`; a restart must begin in normal phase with no warning overlay, no residual slow effect, and no queued interaction/fire action.
+  - Render warning and active effects through the existing canvas overlay/status path after world rendering, with active messaging/effect clearly distinct from warning. Ensure state overlays, victory cinematic transforms, and modal DOM remain authoritative and are not obscured or transformed incorrectly.
+  - “Enemies unaffected” should be validated both behaviorally and structurally: do not gate or scale `updateEnemies`, enemy speed, enemy damage, wave flow, or enemy rendering from storm state.
+- Context7 was unavailable in this environment. No new library/API behavior is introduced; the fallback review relies on the existing game-loop/state code and standard browser JavaScript behavior.
+
+## Current Status
+- Sandstorm plan requires revision before implementation.
+- No code changes made by the debater.
+- Intended implementation scope remains `game.js` only.
+
+## Next Agent
+- Implement the revised sandstorm state machine in `game.js` with explicit cadence/phase durations, pause-safe simulation timing, player-only active effects, and reset/terminal-state guards.
+- Validate with `node --check game.js` plus focused browser checks for warning/active timing, modal pause/resume, restart, game-over/victory transitions, firing/interaction blocking, movement slowdown, and unchanged enemy behavior.
 - HUD-in-canvas modernization review:
   - Verdict: revise before implementation; the direction is correct, but the plan needs a tighter migration and regression boundary.
   - The proposed three-file scope is appropriate and minimal (`game.js`, `index.html`, `style.css`); no new dependency, asset, or gameplay-state refactor is needed.
@@ -561,6 +635,30 @@
   - Avoid changing step navigation semantics unless required by the existing flow. If navigation is allowed during typing, it must cancel the prior run cleanly; if the current UI requires completion before Next, make that gating explicit and test it as a presentation-only timing rule.
   - Medium speed should be a named constant with a documented/obvious interval, not scattered delays. Avoid one timer per character without cleanup; a single scheduled callback/chain per target or a tracked controller is acceptable for this small modal.
   - Context7 is unavailable in this environment. No new library/API behavior is introduced; fallback references are existing DOM timer/event semantics and the project’s current modal implementation. Verify behavior with browser checks rather than relying on unsupported assumptions.
+- Rocket cinematic launch review (latest request):
+  - Verdict: revise before implementation.
+  - Keep implementation limited to `game.js`; no data/schema/CSS dependency changes are required.
+  - Add explicit cinematic state with idempotent start/active/elapsed guards so effects don’t restart unexpectedly across victory updates.
+  - Apply rocket scale curve relative to existing launch render size, peaking around 2x only during final launch animation.
+  - Apply camera shake + zoom only inside a bounded world-render `ctx.save()`/`ctx.restore()` scope; reset transforms before HUD/overlay rendering.
+  - Ensure cinematic effects are cleaned up on completion, restart, and non-victory states (no leakage).
+  - Keep pre-launch rocket rendering and gameplay semantics unchanged (controls, combat, waves, objectives, modal/quiz/progression).
+  - Context7 unavailable; MDN Canvas transform semantics used as fallback reference.
+- Sandstorm obstacle review (latest request):
+  - Verdict: revise before implementation.
+  - Keep implementation scope to `game.js` only.
+  - Define explicit storm state machine (`normal`, `warning`, `active`) with documented constants for cycle timing.
+  - Clarify cadence semantics (7-second cycle interpretation) and avoid drift/double-trigger behavior.
+  - Advance/freeze storm timing only in active gameplay (`PLAYING` + modal not open), with exact resume after pause/modal close.
+  - During active storm:
+    - heavily slow movement via transient multiplier in player update path,
+    - block firing at action entry points,
+    - block interaction handling (including held/queued input effects),
+    - keep enemies and wave/combat systems otherwise unchanged.
+  - Prevent storm progression/effects during game-over, victory, and launch cinematic countdown.
+  - Reset all storm state cleanly on restart.
+  - Render warning/active messaging in stable screen-space overlay path without transform leakage.
+  - Context7 unavailable; fallback is existing game-loop/state architecture + standard browser timing behavior.
 - Required adjustment: “remove fallback completely” must include the fallback DOM node, its CSS, the `imageFallback` reference, and every fallback text/toggle branch. The remaining image path should hide/remove `intelImage` when `imageUrl` is absent or fails, rather than displaying replacement UI.
 - Required edge-case handling: clear/reset image `onload`/`onerror` handlers and remove the prior `src` when no URL is available, so a failed or previous rover image cannot remain visible while another modal entry is rendered. Preserve the existing image element and valid-image rendering.
 - Validation should include `node --check game.js`, a repository search proving no `imageFallback` references remain, and a focused browser check for valid image display, missing/failed image with no fallback panel/text, modal close/backdrop/keyboard behavior, pause/resume, and quiz retries/correct-answer retrieval.
@@ -570,6 +668,18 @@
   - Acceptance Criteria: require the canonical beginning-of-video embed, no iframe for missing/invalid URLs, playback stops when modal closes, and explicit verification that image-first stacking, pause/resume, close paths, and quiz gating remain unchanged.
 
 ## Files To Change
+- Sandstorm obstacle pass (implemented this pass):
+  - `game.js` (added explicit `normal`/`warning`/`active` sandstorm state machine with deterministic cadence constants; simulation-time phase advancement only during active gameplay; active-phase player slow multiplier + fire/interact blocking including held/queued interaction suppression; screen-space warning/active overlay rendering; non-playing suppression and restart reset cleanup)
+  - `WORKFLOW_STATE.md` (implementor notes/tests/status/next-agent handoff updates)
+- Sandstorm obstacle pass (planned):
+  - `game.js` (storm cycle state/timers, warning phase, active-storm player slow + action block hooks, HUD/status messaging, reset integration)
+  - `WORKFLOW_STATE.md` (planning/debate/handoff updates)
+- Rocket cinematic launch pass (implemented this pass):
+  - `game.js` (added idempotent victory-launch cinematic state guards; bounded world-scope camera shake/zoom transform with matched `ctx.save()`/`ctx.restore()`; visual-only ~2x rocket scale/rise during final launch; cinematic duration extension; cleanup on reset/non-victory)
+  - `WORKFLOW_STATE.md` (implementor notes/tests/status/next-agent handoff updates)
+- Rocket cinematic launch pass (planned):
+  - `game.js` (final launch animation scale/timing, camera shake+zoom, transform reset safety)
+  - `WORKFLOW_STATE.md` (planning/debate/handoff updates)
 - Modal typewriter quiz-feedback follow-up (implemented this pass):
   - `game.js` (added `#intelQuizFeedback` to step-3 immutable source-target capture; routed wrong/correct feedback updates through existing tokenized/cancellable typewriter lifecycle while keeping navigation chrome text excluded)
   - `WORKFLOW_STATE.md` (implementor notes/tests/status/next-agent handoff updates)
@@ -704,6 +814,59 @@
   - `opencode.json` (`agent.debater.model` set to `github-copilot/gpt-5.6-luna`)
 
 ## Current Status
+- Sandstorm obstacle implementation complete (minimal scope, `game.js` only):
+  - Added explicit storm phase machine: `normal` → `warning` → `active`.
+  - Cadence semantics are explicit and deterministic:
+    - active storm starts every 7 seconds of active gameplay time,
+    - each active phase is preceded by warning,
+    - phase transitions consume `dt` without drift/double-trigger.
+  - Storm timers advance only when gameplay simulation is active (`state === PLAYING` and modal closed); opening modal freezes storm phase/timer, closing resumes from exact remaining time.
+  - During `active` phase:
+    - player movement uses heavy transient slowdown multiplier (not freeze),
+    - player actions are blocked at entry points (`shoot` gate + interaction gate),
+    - held/queued interaction path is suppressed/reset (`interactPressed` cleared in blocked/non-playing paths).
+  - Enemy/wave/non-player combat systems unchanged.
+  - Storm progression is suppressed outside PLAYING; restart resets storm state cleanly.
+  - Warning/active messaging renders in stable screen-space overlay path (`ctx.setTransform(...)`) with no world-transform leakage.
+  - Ready for reviewer validation.
+- Phase 1 (Clarify) reopened for new sandstorm obstacle request:
+  - User requested a sandstorm every 7 seconds that blocks player movement.
+  - Clarifications received: passing-only effect, heavy slow (not full freeze), player-only impact, all player actions blocked during storm, and warning before storm.
+- Phase 2 complete for sandstorm obstacle request:
+  - Scope and behavior are fully clarified with no blocking questions.
+- Phase 3 complete for sandstorm obstacle request:
+  - Plan and files-to-change are prepared and ready for debater review.
+- Sandstorm obstacle plan reviewed: revise before implementation.
+- Required hardening recorded: explicit storm state machine + cadence semantics, pause/resume freeze guarantees, action-entry blocking during active storm, non-playing-state suppression, and restart cleanup.
+- Phase 4 handoff ready for sandstorm obstacle request:
+  - Debater feedback accepted and merged into plan.
+  - Scope and acceptance criteria are clear and non-blocking.
+- Context/API verification for this planning pass:
+  - Context7 MCP is unavailable in this environment.
+  - MDN timer guidance used as fallback reference: prefer game-loop/delta-time driven scheduling over raw interval drift for deterministic in-game cadence handling.
+- Rocket cinematic launch implementation complete (minimal scope, `game.js` only):
+  - Final/victory launch now runs a guarded cinematic state (`started`/`active`/`elapsed`/`duration`) so the sequence starts once and does not restart during victory frames.
+  - Camera shake + zoom are applied only in bounded world-render scope and are cleaned by matched `ctx.save()`/`ctx.restore()` before HUD/prompt/overlay rendering.
+  - Rocket visual scale reaches ~2x only during final launch rendering; no collisions/mechanics/input logic changed.
+  - Cinematic state is reset on restart and cleaned when leaving victory/non-victory paths.
+  - Victory overlay text is delayed until cinematic completion for a longer launch feel.
+  - Ready for reviewer validation.
+- Phase 1 (Clarify) reopened for new rocket-launch visual request:
+  - User asked for a more realistic rocket that appears super big while flying out of the screen.
+  - Clarifications received: final/victory launch only, ~2x size peak, camera shake + cinematic zoom, and longer launch timing allowed.
+- Phase 2 complete for rocket-launch cinematic request:
+  - Scope is visual-only and limited to final launch sequence.
+  - No blocking open questions remain.
+- Phase 3 complete for rocket-launch cinematic request:
+  - Plan and files-to-change are prepared and ready for debater review.
+- Rocket cinematic launch plan reviewed: revise before implementation.
+- Required hardening recorded: idempotent cinematic state guards, bounded transform scope with cleanup, restart/non-victory cleanup, and strict launch-only 2x visual scaling with no mechanics changes.
+- Phase 4 handoff ready for rocket cinematic request:
+  - Debater feedback accepted and merged into plan.
+  - Scope and acceptance criteria are clear and non-blocking.
+- Context/API verification for this planning pass:
+  - Context7 MCP is unavailable in this environment.
+  - MDN fallback used to verify Canvas 2D `setTransform()` behavior (transform override/reset semantics) for safe temporary cinematic zoom/shake application and cleanup.
 - Implementor follow-up complete for reviewer-requested modal typewriter fix:
   - `#intelQuizFeedback` is now captured in step-3 immutable source-target inventory and included in typewriter coverage.
   - Wrong-answer and success feedback updates now render through the same tokenized/cancellable typewriter lifecycle used by modal steps.
@@ -722,7 +885,20 @@
    - Static syntax and JSON checks pass, but complete rover+quiz text coverage is not yet demonstrated because quiz feedback is not animated.
  - User clarified scope boundary after review:
    - Animate only rover content + quiz content text.
-   - Do not animate navigation chrome text (`Back`, `Next`, `Step N of 3`).
+- Do not animate navigation chrome text (`Back`, `Next`, `Step N of 3`).
+- New request adds a cinematic rocket-launch visual upgrade (larger apparent rocket scale and more realistic takeoff presentation).
+- Rocket cinematic constraints (clarified):
+  - Apply effects only in final/victory launch sequence.
+  - Target peak rocket scale ≈ 2x current launch size.
+  - Required effects: camera shake + cinematic zoom.
+  - Launch animation duration may be longer.
+  - No pre-launch gameplay/mechanics changes.
+- Sandstorm request constraints:
+  - Introduce periodic sandstorm cadence of every 7 seconds.
+  - While storm is passing, player movement is heavily slowed.
+  - While storm is passing, all player actions are blocked.
+  - Enemy behavior remains unchanged by sandstorm.
+  - Warning should appear before each storm.
 - Modal typewriter request is clarified and ready for debate review:
   - Animate all text in all 3 modal steps.
   - Include quiz option text in typewriter animation.
@@ -1023,25 +1199,88 @@
 - Typewriter effect cannot be skipped/fast-forwarded by user actions.
 - Revisiting any modal step replays that step’s typewriter animation from the start.
 - Existing modal/quiz behavior remains unchanged (pause/resume, close paths, retries, correctness gating, success auto-close).
+- Final/victory launch animation only is upgraded to cinematic rocket presentation.
+- Rocket appears approximately 2x larger during the launch takeoff sequence.
+- Launch sequence includes camera shake and cinematic zoom effects.
+- Launch animation duration is longer than current baseline to improve cinematic feel.
+- Pre-launch rocket behavior and non-launch gameplay mechanics remain unchanged.
+- Sandstorm obstacle triggers every 7 seconds with a warning before each storm.
+- Sandstorm effect applies only while storm is actively passing.
+- During active storm, player movement is heavily slowed.
+- During active storm, all player actions are blocked.
+- Enemies are unaffected by sandstorm behavior.
+- Sandstorm state/timers reset cleanly on restart and do not leak across non-playing states.
+- Sandstorm uses explicit normal/warning/active phases with deterministic cadence (no double-trigger drift).
+- Warning appears before each active storm and transitions cleanly back to normal.
+- During active storm, player movement is heavily slowed but not fully frozen.
+- During active storm, firing and interaction actions are blocked (including held/queued action paths).
+- Sandstorm timing/effects freeze while modal is open and resume exactly from remaining phase time on close.
+- Enemy behavior, wave progression, and non-player combat systems remain unchanged by sandstorm.
 
 ## Next Agent
-- `reviewer` — please review the modal typewriter UX implementation in `game.js`:
-  - confirm reviewer-requested follow-up is now complete:
-    - `#intelQuizFeedback` is included in step-3 immutable source target coverage;
-    - wrong-answer (`Not quite. Try again!`) and success feedback messages animate via the typewriter lifecycle while step 3 is visible;
-    - nav chrome text (`Back`, `Next`, `Step N of 3`) remains non-animated.
-  - verify all-step text-target coverage inventory is complete:
-    - step 1: title, summary, detail labels/values, mission objective heading/body;
-    - step 2: title, summary, achievements heading/items, source + image-source attribution text/link labels;
-    - step 3: title, summary, quiz heading/prompt, all quiz option labels, and quiz feedback text.
-  - confirm immutable-source animation behavior (revisit replay from full source text, not mutated DOM leftovers).
-  - confirm one cancellable/tokenized controller lifecycle and timer cleanup on step change, modal close, success auto-close, and reopen.
-  - confirm stale callbacks cannot write into a newer step/session.
-  - confirm DOM/link/event hooks remain intact (no `innerHTML` rebuild side effects).
-  - confirm quiz option buttons remain non-actionable until option-label animation completes.
-  - confirm no regressions in pause/resume, close/backdrop/keyboard paths, quiz retries/correctness gating, chronology gating/progression, and success auto-close.
+- `reviewer` — please review sandstorm implementation in `game.js`:
+  - verify explicit `normal`/`warning`/`active` state machine and timing constants/cadence semantics (active storm every 7s of active gameplay time);
+  - verify warning → active → normal transitions are deterministic and do not double-trigger/drift;
+  - verify timers advance only during `PLAYING` with modal closed, and freeze/resume exactly around modal open/close;
+  - verify active-phase player-only effects: heavy movement slow + fire/interact block (including held/queued interaction suppression);
+  - verify enemies/wave progression/non-player combat remain unchanged;
+  - verify non-playing suppression/reset behavior (game-over/victory/launch countdown, restart cleanup);
+  - verify warning/active overlays render in screen-space (no transform leakage into HUD/world).
+  - @reviewer please review the result.
 
 ## Implementation Notes
+- Implemented approved sandstorm obstacle plan with minimal scope in `game.js`:
+  - Added explicit storm enums/constants:
+    - `SANDSTORM_STATE = { NORMAL, WARNING, ACTIVE }`
+    - `SANDSTORM_ACTIVE_CADENCE_SECONDS = 7`
+    - `SANDSTORM_WARNING_DURATION_SECONDS = 1.6`
+    - `SANDSTORM_ACTIVE_DURATION_SECONDS = 2.1`
+    - `SANDSTORM_PLAYER_SPEED_MULTIPLIER = 0.18`
+    - derived normal durations for deterministic cycle timing.
+  - Added storm runtime state + lifecycle helpers:
+    - `sandstorm = { phase, phaseRemaining }`
+    - `resetSandstorm()`, `isSandstormActive()`, `advanceSandstorm(dt)`, `transitionSandstormPhase()`.
+  - Integrated progression semantics safely:
+    - `update()` now advances storm only inside active gameplay simulation path.
+    - Non-playing path (`state !== PLAYING`) resets storm and clears queued interaction flag.
+    - Modal pause path continues to freeze storm timing by early-returning before advancement.
+  - Applied active-storm player-only effects:
+    - movement slowdown in `updatePlayer()` via transient multiplier (no permanent mutation of `player.speed`),
+    - firing blocked in `updatePlayer()` when storm active,
+    - interactions blocked in both `update()` interaction dispatch and `handleInteraction()` hard guard,
+    - `keydown` `E` path refuses new interaction queue during active storm.
+  - Added stable screen-space messaging:
+    - `drawSandstormOverlay()` draws warning/active panel (and active tint) using reset transform,
+    - called after world render and alongside existing HUD/overlay path.
+  - Added active-storm prompt behavior:
+    - `drawInteractionPrompt()` now displays an explicit blocked-actions message during active storm instead of interact hints.
+  - Kept enemy behavior/wave progression/combat logic unchanged.
+  - Kept modal/quiz/chronology/rocket-cinematic systems unchanged beyond required storm gates.
+- Context/API verification note for this pass:
+  - Context7 MCP is unavailable in this environment; no external framework/library API was introduced.
+  - Implementation uses existing in-project Canvas/DOM/game-loop patterns and standard JavaScript control flow.
+- Implemented approved rocket cinematic launch plan in `game.js` with minimal scope:
+  - Added cinematic constants and explicit state object:
+    - `VICTORY_LAUNCH_CINEMATIC_DURATION`, `VICTORY_LAUNCH_CAMERA_SHAKE_PX`, `VICTORY_LAUNCH_ZOOM_MAX`, `VICTORY_LAUNCH_ROCKET_SCALE_MAX`, `VICTORY_LAUNCH_RISE_DISTANCE`.
+    - `launchCinematic = { started, active, elapsed, duration }`.
+  - Added idempotent lifecycle helpers:
+    - `resetLaunchCinematic()`, `startLaunchCinematic()`, `updateLaunchCinematic(dt)`, `getLaunchCinematicProgress()`.
+    - `updateLaunchCinematic(dt)` is called at start of `update()` and auto-cleans state on non-victory.
+    - `resetGame()` now clears cinematic state.
+  - Added bounded world-transform helpers:
+    - `getLaunchCinematicWorldTransform()` computes zoom + decaying shake only when victory cinematic is active.
+    - `applyWorldTransform(transform)` applies transform only inside world pass.
+  - Updated render order safely:
+    - `draw()` now wraps world rendering in `ctx.save(); applyWorldTransform(...); ...; ctx.restore();`.
+    - HUD/prompt/overlay remain after restore (`drawHudOverlay()`, `drawInteractionPrompt()`, `drawStateOverlay()`), preserving screen-space UI.
+  - Updated rocket launch visuals only:
+    - In `drawRocketZone()`, when assembled + victory: rocket scales toward ~2x, rises upward, and flame intensifies over cinematic progress.
+    - Outside victory cinematic, pre-launch/launch-timer rendering baseline remains intact.
+  - Cinematic-length feel:
+    - Victory overlay is suppressed while `launchCinematic.active` to let the longer launch play before end text appears.
+- Context/API verification note for this pass:
+  - Context7 MCP remains unavailable in this environment.
+  - Used MDN Canvas 2D `setTransform`/transform semantics fallback to ensure world-transform isolation and cleanup strategy is correct.
 - Implemented reviewer-requested modal typewriter follow-up in `game.js` (minimal scope):
   - Added `intelUi.quizFeedback` into `captureIntelStepSourceTargets()` step-3 immutable target set so feedback text is part of explicit coverage.
   - Refactored existing step animation into reusable `runIntelTypewriter(stepIndex, targets, { onStart, onComplete })` while preserving the same single tokenized/cancellable controller lifecycle.
@@ -1413,6 +1652,51 @@
 - Context7 was unavailable; no new library/API behavior was introduced. Browser runtime validation was unavailable in this CLI-only review.
 
 ## Test Results
+- Sandstorm obstacle verification (this pass):
+  - `node --check "game.js"` ✅
+  - Focused static/manual checks ✅
+    - deterministic cadence + transitions:
+      - explicit state machine (`SANDSTORM_STATE.NORMAL/WARNING/ACTIVE`) and constants present;
+      - cadence semantics documented and encoded (`active` starts every 7 seconds of active gameplay time);
+      - `advanceSandstorm(dt)` consumes remaining phase time and transitions in a loop (no skipped/stacked phase loss under large `dt`).
+    - player-only effect:
+      - player movement slowdown is gated by `isSandstormActive()` in `updatePlayer()`;
+      - no storm branches in `updateEnemies()`/`updateWaveFlow()`/enemy stats.
+    - movement slow + action blocking during active storm:
+      - movement uses `SANDSTORM_PLAYER_SPEED_MULTIPLIER` (heavy slow, not freeze);
+      - firing blocked in `updatePlayer()`;
+      - interaction blocked in `keydown` (`E` queue gate), in `update()` dispatch gate, and in `handleInteraction()` guard.
+    - freeze/resume with modal open/close:
+      - storm advancement occurs only after `if (state !== PLAYING || intelOpen) return` gate;
+      - modal open freezes phase/time; close resumes same phase from remaining time.
+    - restart + non-playing cleanup:
+      - `resetGame()` calls `resetSandstorm()` and clears queued interaction;
+      - non-playing update path resets storm and clears queued interaction;
+      - storm overlay suppressed when not playing/modal open.
+    - overlay rendering stability:
+      - `drawSandstormOverlay()` uses `ctx.setTransform(1,0,0,1,0,0)` and draws in HUD/overlay path to prevent transform leakage.
+    - no core gameplay/progression regressions (static):
+      - enemy update/combat/wave code paths untouched;
+      - modal/quiz/chronology/rocket cinematic logic retained.
+  - Limitation: browser runtime playtest is not executable in this CLI-only environment.
+- Rocket cinematic launch verification (this pass):
+  - `node --check "game.js"` ✅
+  - Focused static checks ✅
+    - Final-launch-only activation:
+      - cinematic transform path gated by `state === GAME_STATE.VICTORY` and `launchCinematic.active`.
+      - no cinematic state starts in pre-launch/gameplay path.
+    - ~2x scaling feel:
+      - rocket scale uses `VICTORY_LAUNCH_ROCKET_SCALE_MAX = 2` in victory-only render branch.
+    - Shake/zoom bounded + smooth:
+      - decaying sinusoidal shake + eased zoom computed in `getLaunchCinematicWorldTransform()`.
+      - application is bounded by `ctx.save()/ctx.restore()` in `draw()` world pass.
+    - No HUD/UI transform leakage:
+      - HUD/prompt/overlay draw calls execute after world restore; HUD also resets transform internally (`ctx.setTransform(1,0,0,1,0,0)`).
+    - Restart/game-over cleanup:
+      - `resetGame()` calls `resetLaunchCinematic()`; non-victory path in `updateLaunchCinematic()` resets stale cinematic state.
+    - Unchanged pre-launch/gameplay semantics:
+      - input mappings (`J/K/L/I`, `E`, `R`), combat/wave/objective/modal/quiz/chronology paths untouched.
+  - Limitation: browser runtime playtest not executable in this CLI-only environment.
 - Modal typewriter quiz-feedback follow-up verification (this pass):
   - `node --check "game.js"` ✅
   - Focused static checks ✅
