@@ -2,6 +2,7 @@
 
 ## Request
 - Build a game using HTML and JavaScript.
+- LATEST REQUEST (new session, overrides pending sandstorm work): Research-only task — enumerate all GitHub Copilot models, their use cases, build a comparison, analyze `.opencode/agents/` configs against `AGENTS.md` workflow, and propose which model should be assigned to which agent. DO NOT change any files. DO NOT touch existing model settings in `.opencode/agents/`.
 - New change request: when a player finds a rover, show information about that rover sourced from NASA.
 - Bug report: rover intel modal is always open; when clicking the close button it should close.
 - New change request: rover information is not complete; add image for every rover and more detailed information in the modal window.
@@ -30,6 +31,29 @@
   - Effect applies to player only (enemies unaffected).
   - During storm, all player actions are blocked.
   - Show warning before each storm.
+
+## Clarified Scope (current request)
+- Research + analysis only. No file modifications anywhere (including `.opencode/agents/`).
+- Deliverables: (1) full list of GitHub Copilot models with use cases, (2) comparison, (3) per-agent model recommendation for the 8 agents in `.opencode/agents/` per `AGENTS.md` workflow order.
+- Data source: official GitHub Copilot docs (docs.github.com) — verified 2026-11.
+
+## Copilot Model Research (verified via GitHub Docs)
+### Task categories used by GitHub
+- Agentic software development (autonomous, long-running code work)
+- General-purpose coding and agent tasks (balanced default)
+- Deep reasoning and debugging (complex multi-file reasoning)
+- Fast help with simple/repetitive tasks (low latency, low cost)
+- Long-horizon autonomous coding (continuous planning, verification)
+- Security-focused code generation (Gemini 4 Carbon specialty)
+- Long-context multi-step agent work (Kimi K3 specialty)
+
+### Model landscape (GA, grouped by task fit)
+- Fast/cheap (simple tasks): GPT-5.6 Luna, GPT-6 Luna, Claude Haiku 4.5/5.5, Gemini 3.8 Flash, MAI-Code-1.1-Flash, MAI Code 2 Flash, GPT-5.4 nano
+- General-purpose / everyday agentic: GPT-5.3-Codex (LTS base + fallback), GPT-6.1 Terra, Claude Sonnet 4.6/5/5.5, GPT-6 Sol, Grok 4.5/4.6
+- Deep reasoning / complex coding: GPT-5.6 Sol, GPT-6.1 Sol, GPT-6.2 Sol, Claude Opus 4.8 (+fast mode), MAI Code 2, Grok 4.7
+- Long-horizon autonomous: GPT-6 Astra, GPT-6.2 Astra, Claude Fable 5/5.1/5.2, Claude Opus 5.5
+- Security-focused: Gemini 4 Carbon (secure code generation); Gemini 4 Argon (thorough edge-case testing); Gemini 4 Hydrogen/Neon (fast efficient agentic)
+- Long-context agentic: Kimi K3 (multi-step across large codebases; elevated-risk caveats per docs)
 
 ## Clarified Scope
 - Build a Mars-themed rover survival mini-game prototype in HTML + JavaScript.
@@ -1869,3 +1893,122 @@ Handoff note: @reviewer please review the chronology-learning implementation in 
 
 ## Commit Message Draft
 -
+
+## Copilot Model Analysis — Agent Mapping (RESEARCH ONLY, NO CHANGES APPLIED)
+
+### Current assignments (as-is, to be ignored/preserved)
+- planner: `github-copilot/claude-sonnet-4.6` (primary, temp 0.1, orchestrates workflow)
+- debater: `github-copilot/gpt-5.6-luna` (temp 0.3)
+- implementor: `github-copilot/gpt-5.3-codex` (temp 0.15, full edit/bash)
+- reviewer: `github-copilot/gpt-5.6-luna` (temp 0.1)
+- security-reviewer: `ollama/qwen3.6:27b` (local, temp 0.05)
+- tester: `github-copilot/gpt-5-mini` (temp 0.0) — NOTE: gpt-5-mini not in current GA docs list
+- linter: `github-copilot/gpt-5-mini` (temp 0.0) — same caveat
+- commit-message: `github-copilot/gpt-5-mini` (temp 0.2) — same caveat
+
+### Observations on current setup
+- gpt-5-mini is absent from the current supported-models doc; if unavailable in this environment it explains past `Model not found` errors (e.g. earlier `gpt-5.4` failures recorded in Debate Notes).
+- gpt-5.3-codex is the documented LTS/fallback base model — a safe, stable choice for implementor.
+- claude-sonnet-4.6 for planner is reasonable: general-purpose, strong reasoning, supports 1M context + configurable reasoning.
+- Local ollama model for security-reviewer keeps sensitive code off cloud, but a security-specialized cloud model (Gemini 4 Carbon) exists.
+
+### Proposed assignments (recommendation only — NOT applied)
+| Agent | Role demand | Proposed model | Rationale |
+|---|---|---|---|
+| planner | Orchestration, clarification, structured planning, long state file | `claude-sonnet-4.6` (keep) or upgrade `gpt-6.1-terra` | General-purpose agent tasks; Sonnet 4.6 has 1M ctx + configurable reasoning for the large WORKFLOW_STATE |
+| debater | Plan critique, trade-off analysis, edge cases | `gpt-5.6-sol` | Deep reasoning/debugging category; better critique depth than Luna (a fast/cheap model) |
+| implementor | Multi-file agentic code edits, API verification | `gpt-5.3-codex` (keep) | Purpose-built for agentic software development; LTS stability |
+| reviewer | Correctness/maintainability review vs acceptance criteria | `claude-opus-5.5` or `gpt-6.1-sol` | Deep reasoning; Opus 5.5 strong at multistep review + error recovery |
+| security-reviewer | Threat-focused review, secret/injection detection | `gemini-4-carbon` | Only model explicitly positioned for security-focused code generation; keep ollama if data-locality is mandatory |
+| tester | Run bazel, report pass/fail — mechanical | `gpt-5.6-luna` or `claude-haiku-4.5` | Fast/cheap category fits repetitive command+report loop; replaces non-listed gpt-5-mini |
+| linter | Run one script, report — trivial | `gpt-5.6-luna` or `gemini-3.8-flash` | Cheapest/fastest tier is sufficient |
+| commit-message | Summarize diff into conventional commit | `gpt-5.6-luna` or `claude-haiku-4.5` | Short structured text generation; no deep reasoning needed |
+
+### Cost/latency notes
+- Fast-tier models (Luna/Haiku/Flash/nano) should cover tester, linter, commit-message to minimize credits.
+- Deep-reasoning models (Sol/Opus) reserved for debater + reviewer where mistake-detection quality matters most.
+- 1M-context + configurable reasoning (Sonnet 4.6, Opus 4.8/5.5) increase credit consumption; use default context/reasoning unless WORKFLOW_STATE grows too large.
+- Kimi K3 caveat from docs: elevated risk on sensitive prompts, less consistent refusals — acceptable for planner/orchestration but review before security-adjacent roles.
+
+## Approved Plan (model reassignment — user approved 2026-11-20)
+- User explicitly approved implementing the proposed mapping and requested direct handoff to implementor (debater step skipped per explicit user instruction; change is config-only, low-risk).
+- Locked decisions (where alternatives existed, planner selected one):
+  - planner: KEEP `github-copilot/claude-sonnet-4.6` (no change)
+  - debater: `github-copilot/gpt-5.6-luna` → `github-copilot/gpt-5.6-sol`
+  - implementor: KEEP `github-copilot/gpt-5.3-codex` (no change)
+  - reviewer: `github-copilot/gpt-5.6-luna` → `github-copilot/claude-opus-5.5`
+  - security-reviewer: `ollama/qwen3.6:27b` → `github-copilot/gemini-4-carbon` (security-specialized model; accept cloud processing — if user later requires data locality, revert this one line)
+  - tester: `github-copilot/gpt-5-mini` → `github-copilot/gpt-5.6-luna` (gpt-5-mini not in current GA model list)
+  - linter: `github-copilot/gpt-5-mini` → `github-copilot/gpt-5.6-luna`
+  - commit-message: `github-copilot/gpt-5-mini` → `github-copilot/gpt-5.6-luna`
+- Change ONLY the `model:` frontmatter line in each affected file. Do not touch descriptions, temperatures, max_steps, permissions, or prompt bodies.
+- Validation: confirm no remaining `gpt-5-mini` / `gpt-5.6-luna`-where-replaced references via grep; visually confirm YAML frontmatter intact in all 8 files.
+
+## Files To Change
+- Implemented (model line only in frontmatter):
+  - `.opencode/agents/debater.md`
+  - `.opencode/agents/reviewer.md`
+  - `.opencode/agents/security-reviewer.md`
+  - `.opencode/agents/tester.md`
+  - `.opencode/agents/linter.md`
+  - `.opencode/agents/commit-message.md`
+- Confirmed unchanged:
+  - `.opencode/agents/planner.md`
+  - `.opencode/agents/implementor.md`
+- Follow-up fix (this pass):
+  - `.opencode/agents/commit-message.md` (restored original no-trailing-newline EOF state; retained approved model line `github-copilot/gpt-5.6-luna`)
+
+## Implementation Notes
+- Applied exactly six model frontmatter replacements (no other frontmatter keys/body text changed):
+  - `.opencode/agents/debater.md`: `github-copilot/gpt-5.6-luna` → `github-copilot/gpt-5.6-sol`
+  - `.opencode/agents/reviewer.md`: `github-copilot/gpt-5.6-luna` → `github-copilot/claude-opus-5.5`
+  - `.opencode/agents/security-reviewer.md`: `ollama/qwen3.6:27b` → `github-copilot/gemini-4-carbon`
+  - `.opencode/agents/tester.md`: `github-copilot/gpt-5-mini` → `github-copilot/gpt-5.6-luna`
+  - `.opencode/agents/linter.md`: `github-copilot/gpt-5-mini` → `github-copilot/gpt-5.6-luna`
+  - `.opencode/agents/commit-message.md`: `github-copilot/gpt-5-mini` → `github-copilot/gpt-5.6-luna`
+- Validation output:
+  - `grep -n "^model:" .opencode/agents/*.md`
+    - `.opencode/agents/commit-message.md:4:model: github-copilot/gpt-5.6-luna`
+    - `.opencode/agents/debater.md:4:model: github-copilot/gpt-5.6-sol`
+    - `.opencode/agents/implementor.md:4:model: github-copilot/gpt-5.3-codex`
+    - `.opencode/agents/linter.md:4:model: github-copilot/gpt-5.6-luna`
+    - `.opencode/agents/planner.md:4:model: github-copilot/claude-sonnet-4.6`
+    - `.opencode/agents/reviewer.md:4:model: github-copilot/claude-opus-5.5`
+    - `.opencode/agents/security-reviewer.md:4:model: github-copilot/gemini-4-carbon`
+    - `.opencode/agents/tester.md:4:model: github-copilot/gpt-5.6-luna`
+  - `grep -rn "gpt-5-mini" .opencode/`
+    - `(no output)`
+- Frontmatter integrity check:
+  - Verified each of the 8 agent files still starts with `---` and has the `model:` line inside the YAML frontmatter block.
+- Context/API note:
+  - No external library/framework API usage was involved in this config-only frontmatter change.
+- Follow-up fix applied for review finding:
+  - Restored `.opencode/agents/commit-message.md` final EOF newline state to match original (`no trailing newline`) while keeping `model: github-copilot/gpt-5.6-luna` unchanged.
+  - Verification output:
+    - `git diff -- .opencode/agents/commit-message.md` now shows only the model-line replacement (no EOF newline hunk).
+    - `tail -c 1 .opencode/agents/commit-message.md | xxd` → `00000000: 65                                       e`
+
+## Review Findings (model reassignment review)
+- Verdict: acceptable after re-review; no implementation changes required.
+- Expected model assignments are present in all six targeted files:
+  - `debater.md`: `github-copilot/gpt-5.6-sol`
+  - `reviewer.md`: `github-copilot/claude-opus-5.5`
+  - `security-reviewer.md`: `github-copilot/gemini-4-carbon`
+  - `tester.md`, `linter.md`, `commit-message.md`: `github-copilot/gpt-5.6-luna`
+- `planner.md` and `implementor.md` are unchanged and retain their approved models.
+- All eight agent files start with `---`, contain one `model:` line inside frontmatter, and have a closing `---`. No `gpt-5-mini` references remain under `.opencode/`.
+- `git diff -- .opencode/agents/commit-message.md` now shows only the approved `model:` replacement (`gpt-5-mini` → `gpt-5.6-luna`); the file's last byte is `e` and there is no trailing newline drift.
+- `git diff -- .opencode/agents/` shows exactly six one-line model replacements. `planner.md` and `implementor.md` are untouched. The pre-existing untracked `website.zip` is explicitly out of scope and does not block this review.
+- All 8 agent files retain valid YAML frontmatter blocks: opening `---`, one `model:` entry within frontmatter, and closing `---`.
+- New model names match the GA model list recorded in the research section. Moving `security-reviewer` from local Ollama to cloud Gemini is an accepted plan trade-off; retain the documented revert path if data locality becomes required.
+- No library/framework/API behavior is involved; context7 verification is not applicable to this frontmatter-only configuration review.
+
+## Current Status (this request)
+- Re-review passed: `.opencode/agents/commit-message.md` preserves the original no-trailing-newline EOF state and only differs by the approved model-line change.
+- The complete agent diff is limited to the six approved model-line changes; all 8 frontmatter blocks validate structurally.
+- `website.zip` was intentionally not touched in this pass per user instruction (out of scope for this implementor fix).
+- Validation performed: `git diff --check`; model/frontmatter scan over all 8 agent files; `git diff -- .opencode/agents/` review.
+- No runnable test suite applies to this YAML frontmatter-only change.
+
+## Next Agent
+- commit-message — tester and linter are not applicable for this YAML frontmatter-only change; git diff, diff-check, and frontmatter/model scans passed. Prepare the final commit message, excluding the out-of-scope `website.zip` artifact.

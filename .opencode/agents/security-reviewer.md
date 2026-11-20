@@ -1,7 +1,7 @@
 ---
 description: Security expert that performs a focused security review of recent changes
 mode: subagent
-model: ollama/qwen3.6:27b
+model: github-copilot/gemini-4-carbon
 temperature: 0.05
 max_steps: 6
 permission:
